@@ -1,0 +1,377 @@
+請根據病人資料、檢驗資料、影像資料、用藥紀錄與 chemotherapy 紀錄，製作一份可下載的 DOCX 病人衛教／藥物治療摘要文件。
+
+這是一項實際的 DOCX 製作任務。請完成資料整理、DOCX 產生、OOXML 修正、渲染檢查與版面修正，不要只提供文字草稿或示範程式碼。
+
+一、輸出語言與檔案要求
+
+- 閱讀對象是病人，文件要盡最大能力全部使用正體中文，舉例包括但不限於: [lab data] section 翻成檢驗，[exam finding] section 翻成檢查，[consultation] section 是照會，[surgical operation] section 是手術，WBC 則為白血球，CT 是電腦斷層，PET 是正子斷層造影。
+- 請輸出可下載的 DOCX 檔案，不要只在對話中輸出內容。
+- 檔名固定為：
+  PatEdu__[YYYY-MM-DD]__[病歷號]_[患者姓名].docx
+- 日期一律使用 ISO 8601：YYYY-MM-DD。
+- 藥品格式使用 Brand (generic name)；若無明確 Brand，只寫 generic name。
+- generic name 使用小寫。
+- 以第三人稱單數描述患者。
+- 不要加入未由資料支持的推論。
+- 無法確認的資料請寫「資料未明確記載」，不要自行補充。
+- 若引用檢驗、影像或臨床資料，使用簡短 inline evidence，例如：
+  (檢驗 2026-05-21)
+  (電腦斷層 2026-05-23)
+  (化學治療 2026-05-25)
+- 移除所有 :contentReference[oaicite:n]{index=n}、Markdown citation 或其他系統內部標記。
+- 藥物不良反應與監測重點以仿單及公認發表文獻為準。
+- 可翻譯成正體中文的內容均應翻譯，尤其是副作用、警訊與患者注意事項。
+- 必要的英文醫學名詞可保留於中文後方，但不要讓文件充滿未翻譯的英文。
+
+二、製作原則
+
+- 不要將 plain text Markdown 直接塞入 Word。
+- 不要把 Markdown 標題符號、表格分隔線或「- 」字元當成 Word 排版。
+- 必須真正使用 DOCX 功能：
+  - Word 標題樣式
+  - 段落樣式
+  - 表格
+  - 儲存格底色與邊框
+  - 段落內縮
+  - 真正的 bullet list
+  - 粗體與字級層次
+  - 頁首、頁尾及頁碼
+  - 適當段落間距
+- 不要讓整份文件看起來像：
+  - 一堆「- 」開頭的純文字
+  - 沒有縮排層次的 Markdown
+  - 所有內容使用同一字級
+  - 將大量內容塞在單一段落或單一表格儲存格內
+
+三、成功且可重現的 DOCX 製作流程
+
+請依以下順序執行，不要略過渲染及檢查步驟。
+
+1. 先整理資料，再製作 DOCX
+
+先將資料整理成結構化內容，至少包括：
+
+- patient_metadata
+  - 文件日期
+  - 病歷號
+  - 患者姓名
+  - 診斷
+- recent_treatments
+  - 日期
+  - 治療分類
+  - 藥物與劑量
+  - 給藥方式／時間
+  - 備註
+- safety_relevant_data
+  - 檢驗數值
+  - 影像、心臟功能或其他監測資料
+  - 資料日期與證據類型
+- antineoplastic_drugs
+  - 藥物
+  - 機轉
+  - 常見不良反應
+  - 重要副作用
+  - 此患者注意事項
+- supportive_medications
+  - 藥物
+  - 分類／機轉
+  - 主要目的
+  - 注意事項
+- monitoring_points
+  - 藥物／分類
+  - 需要觀察的症狀或檢驗
+  - 臨床警覺重點
+
+先確認日期、劑量、單位、給藥途徑及患者資料彼此一致，再進入排版。
+
+2. 使用適當工具建立真正的 DOCX
+
+- 優先使用 python-docx 建立 DOCX。
+- 可搭配 lxml 或 python-docx 的 OxmlElement、qn 進行必要的 OOXML 修正。
+- 使用 Document()、add_paragraph()、add_table()、section.header、section.footer 等 Word 結構。
+- 不要先產生 Markdown 再直接改副檔名或貼入 Word。
+- 建議建立可重複使用的 helper functions，統一處理：
+  - 字型
+  - 字級與樣式
+  - 表格寬度
+  - 儲存格內距
+  - 表頭底色
+  - 表頭重複
+  - 防止表格列跨頁
+  - 頁首、頁尾與頁碼
+
+3. 設定頁面與段落
+
+- 紙張：A4，21 × 29.7 cm。
+- 上下左右邊界：建議 1.6 cm，可在 1.5–1.8 cm 間微調。
+- 全篇字型：「微軟正黑體」／Microsoft JhengHei。
+- 文件主標題：18 pt，bold。
+- 大段落標題：16 pt，bold。
+- 小段落／表格區塊標題：14 pt，bold。
+- 內文：10.5 或 11 pt。
+- 表格內文可使用 9–10.5 pt，但必須維持可讀性。
+- 行距：1.05–1.15，建議約 1.10。
+- 段前、段後距離應能區分段落，但不要過度浪費版面。
+- 標題應使用真正的 Word style，而不只是手動放大字體。
+- 視需要設定 keep_with_next，避免標題落在頁尾、內容被推到下一頁。
+
+4. 正確設定中文字型
+
+只設定 run.font.name 並不足以保證中文使用微軟正黑體。每個 run 及主要 styles 都必須同時設定 OOXML 字型屬性：
+
+- run.font.name = ""Microsoft JhengHei""
+- w:rFonts w:ascii=""Microsoft JhengHei""
+- w:rFonts w:hAnsi=""Microsoft JhengHei""
+- w:rFonts w:eastAsia=""Microsoft JhengHei""
+- w:rFonts w:cs=""Microsoft JhengHei""
+
+此設定應套用至：
+
+- Normal
+- Title
+- Heading 1
+- Heading 2
+- Heading 3
+- List Bullet
+- 頁首與頁尾
+- 表格內所有 runs
+- 新增的每一段文字
+
+若執行環境沒有 Microsoft JhengHei，可在本機渲染時使用相容的 CJK 字型替代顯示，但最終 DOCX 的 OOXML 字型指定仍必須保留為 Microsoft JhengHei。
+
+5. 設定頁首、頁尾與頁碼
+
+- 頁首右側放置：
+  台北慈濟醫院 易泰用藥師 關心您
+- 頁首字型：微軟正黑體，10 pt，深灰色，靠右。
+- 頁尾中央放置真正的 Word PAGE field 頁碼，不要手動輸入固定數字。
+- 頁首、頁尾文字同樣需要設定 eastAsia、ascii、hAnsi 及 cs 字型屬性。
+
+6. 建立表格
+
+- 使用真正的 Word table，不要使用 Markdown pipe table。
+- 表格 header 使用淡藍灰或其他淡色底色。
+- 表格欄位不要過多。
+- 依內容明確指定欄寬，不要完全依賴 autofit。
+- 設定 table.autofit = False。
+- 表格總寬度必須小於 A4 可用頁寬，約控制在 17.2–17.8 cm。
+- 同時設定 tblGrid、cell width／w:tcW，避免 Word 或 LibreOffice 任意重新分配欄寬。
+- 設定適當儲存格內距，避免文字貼近框線。
+- 表格文字可以自動換行，但不得超出頁面、重疊或被截斷。
+- 第一列設定為可跨頁重複的表頭，可使用 w:tblHeader。
+- 每一列加入 w:cantSplit，防止同一列被切斷在兩頁。
+- 較長表格可自然跨頁，但不要為了塞在同一頁而把字體縮得過小。
+- 若某一列內容太長，應拆分內容、縮短文字或調整欄寬，不要接受嚴重擁擠的版面。
+- 可依資料量微調欄寬，例如：
+  - 近期療程表：日期較窄、藥物與劑量最寬。
+  - supportive medication 表：藥物、機轉、目的、注意事項四欄，以注意事項最寬。
+  - 監測表：藥物／分類較窄，症狀或檢驗及臨床警覺重點較寬。
+
+7. 產生 DOCX 後進行結構檢查
+
+請先確認 DOCX 可以正常開啟，且不是損壞的 ZIP／OOXML 檔案。
+
+可執行的檢查包括：
+
+- 使用 zipfile 或 unzip 測試 DOCX 結構完整性。
+- 讀取 word/document.xml、styles.xml、header*.xml、footer*.xml。
+- 確認存在：
+  - Word headings／paragraph styles
+  - 真正的 w:tbl 表格
+  - w:cantSplit
+  - 必要時的 w:tblHeader
+  - Microsoft JhengHei 的 w:rFonts 設定
+  - 頁碼 PAGE field
+- 搜尋並排除：
+  - :contentReference
+  - oaicite
+  - Markdown 表格分隔線
+  - 殘留的「##」、「**」或程式碼圍欄
+  - 不應出現的系統標記
+- 確認患者姓名、病歷號及檔名一致。
+
+8. 將 DOCX 渲染為 PNG
+
+- 使用環境中提供的 render_docx.py 將 DOCX 渲染成逐頁 PNG。
+- 若無法直接使用，可使用 LibreOffice headless 將 DOCX 轉成 PDF，再把 PDF 每頁轉為 PNG。
+- 渲染檔僅供內部 QA，不要作為最終交付檔案。
+- 不得僅因程式成功執行就視為完成，必須實際查看每一頁 PNG。
+
+9. 逐頁視覺檢查
+
+請實際檢查每一頁 PNG，至少確認：
+
+- 中文是否正常顯示，沒有方框或亂碼。
+- 頁首與頁尾位置正確。
+- 頁碼正常。
+- 主標題、大標題、小標題有清楚的 18／16／14 pt 層次。
+- 文件看起來是正式 Word 文件，而不是 plain text Markdown。
+- 表格沒有超出頁面。
+- 欄寬分配合理。
+- 文字沒有重疊、截斷或擠成極窄直行。
+- 表格列沒有在跨頁處被切成難以閱讀的兩半。
+- 表頭底色、邊框及段落間距一致。
+- 沒有單獨留在頁尾的標題。
+- 沒有大片不合理空白。
+- 沒有孤立的短尾頁。
+- 沒有奇怪符號、Markdown 標記或系統 citation。
+- 患者重要警訊容易找到，不被大量文字淹沒。
+
+10. 發現問題時必須修正並重新渲染
+
+常見問題及處理方式：
+
+- 中文字型錯誤：
+  補上 w:eastAsia、w:ascii、w:hAnsi、w:cs，而不是只改 run.font.name。
+- 欄寬失控：
+  關閉 autofit，設定 tblGrid、tcW 及明確欄寬。
+- 表格列跨頁切斷：
+  對每一列加入 w:cantSplit。
+- 跨頁後沒有表頭：
+  對第一列加入 w:tblHeader。
+- 文字太擠：
+  精簡內容、調整欄寬、減少欄位或拆成多個表格。
+- 標題孤立於頁尾：
+  設定 keep_with_next 或在適當位置加入分頁。
+- 尾頁只有少量文字：
+  調整段落間距、表格欄寬或分頁位置，不要直接把全篇字體縮小。
+- 文件仍像 Markdown：
+  改用真正的標題樣式、表格、段落與 bullet list，重新製作。
+- 渲染後出現重疊或截斷：
+  修正後再次產生 DOCX 並重新渲染，不可直接交付。
+
+只有在修正並重新渲染確認成功後，才可提供最終 DOCX。
+
+四、文件內容架構
+
+1. 文件標題
+
+- 頁首右側：
+  台北慈濟醫院 易泰用藥師 關心您
+- 頁首使用深灰色、10 pt、靠右。
+- 頁尾中央放置頁碼。
+- 文件主標題：
+  [患者姓名]大德 [病歷號]
+
+2. 近期療程摘要
+
+- 簡短說明患者目前診斷與近期治療。
+- 使用表格列出近期 chemotherapy／treatment：
+  - 日期
+  - 治療分類
+  - 藥物與劑量
+  - 給藥方式／時間
+  - 備註
+
+例如：
+
+2026-05-25｜HER2-targeted therapy｜Phesgo (pertuzumab 600mg, trastuzumab 600mg; 10mL)｜SC 8min｜maintenance
+2026-04-23｜HER2-targeted therapy｜Phesgo (pertuzumab 1200mg, trastuzumab 600mg; 15mL)｜SC 8min｜loading
+2026-04-03｜bone supportive therapy｜Xgeva (denosumab) 120mg｜SC｜bone metastasis support
+
+- 近期療程摘要採中性描述。
+- 「治療分類」只描述藥物本身屬性。
+- 若資料只顯示診斷與用藥，但未明確寫出治療目的，可使用：
+  - antineoplastic therapy
+  - HER2-targeted therapy
+  - immunotherapy
+  - cytotoxic chemotherapy
+  - bone metastasis supportive therapy
+  - supportive medication
+- 不要使用下列分類，除非原始資料明確支持：
+  - palliative therapy
+  - neoadjuvant therapy
+  - adjuvant therapy
+  - maintenance therapy
+  - first-line therapy
+- 若藥物屬性或用途不清楚，寫「資料未明確記載」，不要自行分類成 premedication。
+- 以一句話列出與治療安全性最相關的近期資料，例如：
+  Ca 1.90 mmol/L (Lab 2026-05-23)、glucose 最高304 mg/dL (Lab 2026-05-23)、WBC 4.17 ×10^3/uL／PLT 180 ×10^3/uL (Lab 2026-05-23)。
+
+3. 化療／主要抗腫瘤藥物
+
+- 每個主要抗腫瘤藥物使用獨立小表格或卡片式表格。
+- 不要使用純 Markdown 條列。
+- 每個藥物至少包含：
+  - 藥物
+  - 機轉
+  - 常見不良反應
+  - 重要副作用
+  - 此患者注意事項
+- 常見不良反應與重要副作用可用逗號串列，不要切成過多短行。
+- 「此患者注意事項」應結合已提供資料，但不可過度推論。
+- 若只有一個主要治療藥物，就只列該藥，不要硬湊其他藥物。
+- 若組合製劑包含多個成分，可依臨床可讀性合併說明或分別說明。
+
+4. 前藥／supportive medication
+
+- 只列與抗腫瘤治療、轉移症狀、骨轉移、止吐、止痛、胃保護、血糖控制、hydration 等最相關的藥物。
+- 使用表格呈現，建議欄位：
+  - 藥物
+  - 藥理分類／機轉
+  - 主要目的
+  - 注意事項
+- 注意事項應簡短但具體。
+- 若某藥與患者檢驗或症狀高度相關，加入 inline evidence。
+
+例如：
+
+- Xgeva (denosumab)：RANKL inhibitor；用於骨轉移患者降低 skeletal-related events 風險；注意低血鈣、顎骨壞死及非典型股骨骨折。患者 Ca 降至1.90 mmol/L，且牙科未能完整檢查，後續給藥前需評估補充鈣／維生素D及口腔狀況 (Lab 2026-05-23, Dental consult 2026-04-02)。
+- Decan (dexamethasone phosphate)：systemic corticosteroid；作為脊髓壓迫／發炎水腫與止吐支持；注意高血糖、感染症狀被掩蓋、肌病變、譫妄／失眠及胃腸刺激。
+- Opiodur (fentanyl)、oxycodone hydrochloride、Painkyl (fentanyl)：opioid analgesics；控制骨轉移與脊椎病灶相關疼痛；注意呼吸抑制、嗜睡、便祕／腸阻塞、尿滯留、跌倒及吸入風險。
+
+- supportive medication 很多時，應精簡並使用表格，不要為每個藥物寫冗長段落。
+- 不要把所有住院藥物都列入，只保留與本次衛教最相關者。
+
+5. 治療後重點觀察
+
+- 依個別抗腫瘤藥物分別列出觀察重點。
+- 不要只列一份套用所有藥物的泛用清單。
+- 多個藥物共同造成的毒性可放在「共同觀察重點」。
+- 每個藥物列2–4個最重要的觀察重點。
+- 使用表格或真正有縮排層次的 Word bullet list。
+- 建議表格欄位：
+  - 藥物／分類
+  - 需要觀察的症狀或檢驗
+  - 臨床警覺重點
+
+共同觀察重點範例：
+
+- 發燒 ≥38°C、畏寒、喉嚨痛或咳嗽：注意感染；若發燒或呼吸症狀惡化，需立即回報醫療團隊。
+- 嚴重噁心嘔吐、進食困難、脫水或尿量下降：注意治療相關噁心嘔吐、hydration狀態及腎功能／電解質變化。
+
+Phesgo (pertuzumab, trastuzumab) 範例：
+
+- 喘、心悸、下肢水腫、體重快速增加或活動耐受下降：注意LVEF下降或心肌病變，需確認心臟超音波／LVEF追蹤。
+- 給藥期間或之後出現發燒、畏寒、紅疹、喘、胸悶或血壓下降：注意給藥相關反應、過敏反應或anaphylaxis。
+- 嚴重或持續腹瀉、口渴、尿量減少或頭暈：注意脫水及電解質異常。
+
+Xgeva (denosumab) 範例：
+
+- 手腳或嘴唇麻木、抽筋、肌肉痙攣或心悸：注意低血鈣。
+- 牙痛、牙齦腫痛、口腔傷口不癒合或顎骨疼痛：注意顎骨壞死。
+- 大腿或鼠蹊部新發疼痛：注意非典型股骨骨折。
+
+五、最終品質檢查
+
+輸出 DOCX 前，必須確認：
+
+- 全篇使用微軟正黑體，且中文 OOXML eastAsia 字型設定正確。
+- 主標題／大標題／小標題具有18／16／14 pt bold層次。
+- 使用真正的Word表格、段落、縮排及bullet list。
+- 沒有將Markdown純文字直接貼入Word。
+- 沒有整段內容全部以「- 」開頭。
+- 表格欄寬合理，沒有超出頁面。
+- 表格列未在跨頁處被切斷。
+- 跨頁表格有重複表頭。
+- 頁首、頁尾及頁碼正確。
+- 沒有文字重疊、截斷、亂碼或奇怪符號。
+- 沒有殘留Markdown標記。
+- 沒有 :contentReference、oaicite 或其他系統標記。
+- 患者姓名、病歷號、日期及檔名正確。
+- DOCX已成功渲染為逐頁PNG並完成每頁視覺檢查。
+- 發現問題時已修改DOCX並重新渲染確認。
+
+最終回覆只提供通過上述檢查的 DOCX 下載連結，不需要提供程式碼、PNG、PDF、製作過程或文字版內容。
+
+請現在根據我提供的病人資料開始製作 DOCX。
