@@ -1,0 +1,23 @@
+extract only the "出院診斷", "主述", "病史", "住院治療經過", "出院帶藥" these 5 part of the discharge note, into an "all-itemed, no-numbered" leveled structure, english (including level 1) plain text markdown with no bold or italic fonts, reply the results in a code box.
+The 5 root level (level 1) should be start with ""- "" and level 2 should start with ""  - "" and so on. all english in reply.
+One drug in one line for the medication part.
+Make all the taiwan year (+1911) in dates to Common Era in ISO8601 date format.
+If items within the same major category have a temporal order, sort them in ascending order.
+Keep the prescription dose, frequency, route in original presenting, say ""1 tablet twice daily, 14 days"" should be ""1# BID 14D""
+Discharge Medication format examples:
+     ```
+    - Actein Effervescent (acetylcysteine 600mg; tab) 1# BID PO 4D
+    - Coxine (Isosorbide-5-Mononitrate 20mg; tab) 0.5# QD PO 4D
+    - Folacin (folic acid 5mg; tab) 1# QD PO 4D
+    - Megejohn (megestrol acetate 160mg; tab) 1# QD PO 4D
+    - Romicon-A (dextromethorphan 20mg, cresolsulfonate 90mg, lysozyme 20mg; cap) 1# TID PO 4D
+    - Through (sennoside 12mg; tab) 2# HS PO 4D
+    - Vemlidy (tenofovir alafenamide 25mg; tab) 1# QD PO 4D
+    - Allegra (fexofenadine 60mg; tab) 1# BID PO 4D
+    - Doxaben XL (doxazosin 4mg; tab) 1# QD PO 4D
+    - MgO (magnesium oxide 250mg; tab) 2# TID PO 4D
+    - Pariet FC (rabeprazole 20mg; tab) 1# QDAC PO 4D
+    - Xigduo XR (dapagliflozin 10mg, metformin 1000mg; tab) 1# QDCC PO 4D
+    - Spiron (spironolactone 25mg; tab) 1# BID PO 4D
+    - Uretropic (furosemide 40mg; tab) 0.5# QD PO 4D
+     ```
