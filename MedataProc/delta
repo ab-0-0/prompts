@@ -1,0 +1,1231 @@
+# 任務：比較 Old 與 New，只產生既有 MedBench Chat 尚未看過、且需要用來更新病人資料的增量內容
+
+你正在更新一個已經存在的 MedBench Chat。
+
+該 Chat 已經看過並保存了較早版本的病人資料 `Old`。
+
+現在另有一份較晚日期、已依相同 canonical schema 整理完成的病歷 `New`。
+
+你的任務不是產生完整合併文件，而是產生一份：
+
+`MedBench Delta Update`
+
+只包含：
+
+1. New 中會改變目前 snapshot 狀態的內容。
+2. New 中 Old 尚未包含的 longitudinal records。
+3. New 中屬於同一 historical record、但比 Old 更完整而應取代 Old 的正式版本。
+4. New 中與 Old 發生實質衝突、且 MedBench 必須知道的新資料。
+
+不要重新輸出 Old 已經看過且沒有改變的資料。
+
+---
+
+# 一、重要前提
+
+本 prompt 假設：
+
+* `Old` 與 `New` 屬於同一位病人。
+* `Old` 是 MedBench Chat 已經看過的病歷。
+* `New` 是較晚時間點產生的完整 canonical standardized medical record。
+* `New` 不是 partial extract。
+* Old 與 New 都使用相同或相容的 root-level schema。
+
+如果目前對話中已經同時存在 Old 與 New，可直接使用既有內容進行比較。
+
+若另有完整 `Update` merge 結果存在：
+
+* 不要僅依 Update 推測 delta。
+* 若 Old 與 New 仍可取得，必須直接比較 Old 與 New。
+
+---
+
+# 二、輸入可能形式
+
+可能明確提供：
+
+[OLD]
+
+...
+
+[NEW]
+
+...
+
+也可能 Old 與 New 已經存在於目前 conversation context 中。
+
+`[OLD]` 與 `[NEW]` 只是輸入標記。
+
+最終輸出不可保留這兩個標記。
+
+---
+
+# 三、Canonical root-level sections
+
+Snapshot sections：
+
+[allergy]
+
+[vital signs]
+
+[active medication]
+
+[valid medication]
+
+Longitudinal sections：
+
+[lab data]
+
+[exam finding]
+
+[MedRec]
+
+[consultation]
+
+[surgical operation]
+
+[radiotherapy]
+
+[chemotherapy]
+
+必要時：
+
+[immunochemotherapy]
+
+---
+
+# 四、核心原則
+
+整體規則：
+
+Snapshot = compare by section, replace when changed
+
+Longitudinal = send only novel or replacement records
+
+Old unchanged content = do not resend
+
+不得單純做 line-by-line text diff。
+
+不得把整份 New 當成 update。
+
+不得重新摘要 Old。
+
+不得重新改寫 Old。
+
+不得因語意相似就過度去重。
+
+---
+
+# 五、Snapshot 的特殊處理
+
+Snapshot sections 是：
+
+[allergy]
+
+[vital signs]
+
+[active medication]
+
+[valid medication]
+
+MedBench 已經看過 Old snapshot。
+
+因此必須逐 section 比較 Old 與 New。
+
+---
+
+# 六、Snapshot 完全相同時
+
+若 Old 與 New 某個 snapshot section 完全相同或臨床內容實質相同：
+
+不要輸出該 section。
+
+例如：
+
+Old：
+
+[valid medication]
+
+* Vemlidy ...
+* Norvasc ...
+
+New：
+
+[valid medication]
+
+* Vemlidy ...
+* Norvasc ...
+
+則 Delta 不需要再次輸出 `[valid medication]`。
+
+---
+
+# 七、Snapshot 有任何變化時
+
+如果某 snapshot section：
+
+* 新增藥品
+* 停止藥品
+* 劑量改變
+* 頻次改變
+* route 改變
+* 新生命徵象
+* 新血糖
+* allergy 狀態改變
+* 或任何其他實質差異
+
+不要只輸出新增的那幾行。
+
+必須輸出 New 中該 snapshot section 的「完整新版」。
+
+原因：
+
+MedBench 必須知道目前整個 section 的 authoritative current state。
+
+例如：
+
+Old：
+
+[active medication]
+
+* Drug A
+* Drug B
+
+New：
+
+[active medication]
+
+* Drug A
+* Drug C
+
+Delta 應輸出：
+
+[active medication]
+
+* Drug A
+* Drug C
+
+而不是只輸出：
+
+* Drug C
+
+因為 MedBench 必須同時知道：
+
+Drug B 已不再屬於目前 active medication。
+
+---
+
+# 八、Snapshot replacement 指令
+
+只要 Delta 中出現任何 snapshot section：
+
+MedBench 必須理解為：
+
+「此 section 完整取代先前同名 snapshot section。」
+
+因此在 Delta 最前方加入：
+
+[update instruction]
+
+* Snapshot sections included in this update supersede and replace all previous versions of the same sections.
+
+只有確實有 snapshot change 時才需要這一行。
+
+---
+
+# 九、New 中 snapshot section 消失的情況
+
+因 New 是完整 canonical record，而不是 partial extract：
+
+如果：
+
+Old 有某個 snapshot section
+
+但：
+
+New 完全沒有該 snapshot section
+
+代表該舊 snapshot 不應繼續視為目前狀態。
+
+例如：
+
+Old：
+
+[active medication]
+
+* Cefepime
+* Vancomycin
+
+New：
+
+完全沒有 `[active medication]`
+
+Delta 必須明確告知 MedBench 移除舊 snapshot。
+
+在 `[update instruction]` 中加入：
+
+* Remove the previous [active medication] snapshot; the current New record contains no [active medication] section.
+
+同理適用：
+
+[allergy]
+[vital signs]
+[valid medication]
+
+不要建立假的空 section。
+
+---
+
+# 十、Snapshot 不做歷史累積
+
+不得：
+
+Old snapshot + New snapshot
+
+也不得把被 New 移除的舊 active medication 留作目前狀態。
+
+若需要知道舊藥物曾經使用過，只能依既有 longitudinal record 判讀。
+
+Snapshot 本身不是 longitudinal history。
+
+---
+
+# 十一、Longitudinal sections
+
+以下 sections 只輸出 New 中 Old 尚未看過的內容：
+
+[lab data]
+
+[exam finding]
+
+[MedRec]
+
+[consultation]
+
+[surgical operation]
+
+[radiotherapy]
+
+[chemotherapy]
+
+[immunochemotherapy]
+
+基本公式：
+
+# Delta longitudinal
+
+Novel(New, Old)
++
+Replacement(New, Old)
++
+New conflicting historical information
+
+完全相同的 historical record 不重送。
+
+---
+
+# 十二、Longitudinal record 必須整筆比較
+
+不得逐行 diff。
+
+必須以 clinical record 為單位判斷。
+
+例如：
+
+2026-09-10 Progress Note Hemato-Oncology
+
+* S
+
+  * ...
+* O
+
+  * ...
+* A
+
+  * ...
+* P
+
+  * ...
+
+這整段是一筆 record。
+
+若 Old 已經看過這一整筆：
+
+不要因 New 有部分句子重新出現就再次輸出。
+
+---
+
+# 十三、Novel longitudinal record
+
+若 New 中一筆 record 在 Old 完全不存在：
+
+完整輸出該 record。
+
+例如 Old 最晚只有：
+
+2026-09-10 Progress Note
+
+New 多出：
+
+2026-09-11 Progress Note
+
+則 Delta 只需要加入：
+
+2026-09-11 Progress Note
+
+不需要再次輸出 2026-09-10 的 note。
+
+---
+
+# 十四、[lab data]
+
+一般 lab identity：
+
+date
++
+test
++
+result
++
+unit
+
+例如 Old 已有：
+
+2026-09-10    WBC    7.41    ×10^3/μL
+
+New 仍有相同結果：
+
+不輸出。
+
+New 多出：
+
+2026-09-11    WBC    6.82    ×10^3/μL
+
+則輸出新的一行。
+
+---
+
+## Culture / microbiology
+
+整份報告視為一個 record。
+
+identity：
+
+date
++
+culture type
++
+specimen
+
+例如：
+
+2026-09-08 Sputum culture
+
+* Specimen
+
+  * ...
+* Organism
+
+  * ...
+* Susceptibility
+
+  * ...
+
+Old 已有相同完整報告：
+
+不輸出。
+
+New 新增新的 susceptibility 結果，而明確屬於同一 culture：
+
+視為 replacement，依 replacement 規則處理。
+
+---
+
+# 十五、[exam finding]
+
+record identity：
+
+date
++
+examination type
++
+body site / specimen
+
+例如：
+
+2026-09-08 CXR
+
+2026-09-08 CT - chest
+
+2026-06-04 Pathology - oral cancer
+
+若 Old 已有完全相同 report：
+
+不重送。
+
+---
+
+# 十六、較完整正式 report 的 replacement
+
+例如 Old：
+
+2026-09-08 CXR
+
+* Bilateral infiltrates
+
+New：
+
+2026-09-08 CXR
+
+* Bilateral infiltrates
+* Small bilateral pleural effusions
+* Port-A in place
+
+且可高度確定兩者為同一次檢查的同一 report：
+
+Delta 必須輸出 New 的完整 record。
+
+並在 `[update instruction]` 中加入：
+
+* Records marked as replacement supersede the previous record with the same date and record identity.
+
+該 record 標示：
+
+2026-09-08 CXR [replacement]
+
+* Bilateral infiltrates
+* Small bilateral pleural effusions
+* Port-A in place
+
+`[replacement]` 是更新控制標記。
+
+它不是原始醫療資料。
+
+MedBench 接收後應理解為：
+
+使用此 record 取代舊版同一 record。
+
+---
+
+# 十七、何時可以使用 replacement
+
+只有在高度確定：
+
+* 日期相同
+* record type 相同
+* clinical event 相同
+* 確實是同一 report / note / procedure
+* New 是較完整或較正式版本
+
+才可 replacement。
+
+不能只因：
+
+* New 寫得比較好
+* New wording 不同
+* New 比較簡潔
+* New 格式比較一致
+
+就 replacement。
+
+若不確定：
+
+不要刪除或取代 Old。
+
+將 New 視為額外資料，必要時標示：
+
+[source data inconsistent]
+
+---
+
+# 十八、[MedRec]
+
+每個 clinical note 為一個 record。
+
+常見 identity：
+
+date / date range
++
+note type
++
+department
++
+physician if available
+
+包括：
+
+* SOAP
+* ED
+* Admission Note
+* Progress Note
+* Weekly Summary
+* POMR
+* SDM
+* MultiTeam
+
+---
+
+## SOAP
+
+Old 已有：
+
+2026-09-01 SOAP Hemato-Oncology
+
+New 完全相同：
+
+不輸出。
+
+New 多出：
+
+2026-09-08 SOAP Hemato-Oncology
+
+輸出新 record。
+
+---
+
+## Admission Note
+
+Old Chat 已經看過某 hospitalization 的 Admission Note：
+
+New 再次包含相同 Admission Note：
+
+不重送。
+
+若 New 有新的 hospitalization Admission Note：
+
+輸出。
+
+---
+
+## Progress Note
+
+每一天分開判斷。
+
+Old：
+
+2026-09-08 Progress Note
+2026-09-09 Progress Note
+
+New：
+
+2026-09-08 Progress Note
+2026-09-09 Progress Note
+2026-09-10 Progress Note
+2026-09-11 Progress Note
+
+Delta：
+
+2026-09-11 Progress Note
+
+2026-09-10 Progress Note
+
+不要再次輸出 09-08、09-09。
+
+---
+
+## Weekly Summary
+
+Old 沒看過的新 Weekly Summary：
+
+完整輸出。
+
+已經看過：
+
+不重送。
+
+---
+
+# 十九、住院後來完成並出現 POMR
+
+這是常見的重要更新。
+
+Old 可能只有：
+
+2026-09-01 Admission Note
+
+2026-09-03 Progress Note
+
+2026-09-05 Weekly Summary
+
+2026-09-08 Progress Note
+
+New 後來出現：
+
+2026-09-01 ~ 2026-09-10 POMR
+
+因 MedBench Chat 已經看過先前 daily notes：
+
+Delta 只需要輸出新的：
+
+2026-09-01 ~ 2026-09-10 POMR
+
+不要重新輸出舊 Admission Note / Progress Note / Weekly Summary。
+
+也不要要求 MedBench 刪除舊 notes。
+
+POMR 是新增的 longitudinal summary，與舊 daily notes 可以共同存在。
+
+---
+
+# 二十、New POMR 包含 Old 已知資訊不是 duplicate
+
+即使新 POMR 的：
+
+* History
+* Hospital Course
+* Diagnosis
+
+重述了 MedBench 已經從 Admission Note 或 Progress Note 看過的內容，
+
+只要這是一份新的正式 POMR：
+
+仍視為新的 longitudinal record，完整輸出。
+
+不要把 POMR 拆碎成「只有以前沒出現過的句子」。
+
+完整 clinical document 的完整性優先。
+
+---
+
+# 二十一、[consultation]
+
+identity：
+
+date
++
+consulting specialty
++
+consultation purpose if needed
+
+Old 已看過：
+
+不重送。
+
+New 新 consult：
+
+完整輸出。
+
+同一 consult 的正式 reply 後來補齊：
+
+可以將完整 New consult 作 replacement。
+
+---
+
+# 二十二、[surgical operation]
+
+identity：
+
+date
++
+procedure
+
+New 新手術：
+
+輸出。
+
+Old 已有相同手術：
+
+不重送。
+
+同一手術 New 後來補入完整 intraoperative finding：
+
+可 replacement。
+
+---
+
+# 二十三、[radiotherapy]
+
+identity：
+
+date / treatment period
++
+site
++
+dose/fractions if available
+
+新療程：
+
+輸出。
+
+新 fraction / 新完成狀態若形成新的 clinical record：
+
+輸出。
+
+Old 的 planned RT 後來 New 出現 completed RT：
+
+completed record 是新的重要狀態，必須輸出。
+
+必要時可將 completed record標示 replacement，只有在明確屬於同一 record 的正式更新時才這樣做。
+
+---
+
+# 二十四、[chemotherapy]
+
+identity：
+
+date / date range
++
+regimen
++
+principal antineoplastic agents
+
+Old：
+
+* 2026-09-03 - Keytruda + Padcev
+
+New 又有相同紀錄：
+
+不輸出。
+
+New：
+
+* 2026-09-10 - Padcev
+
+輸出。
+
+不同日期即使 regimen 相同，也視為新的 treatment event。
+
+---
+
+# 二十五、Ordered → administered 的更新
+
+例如 Old：
+
+* 2026-09-10 - Drug A regimen ordered
+
+New：
+
+* 2026-09-10 - Drug A 100mg administered
+
+若可明確確認是同一次療程：
+
+New 是較正式後續狀態。
+
+可輸出：
+
+* 2026-09-10 - Drug A 100mg administered [replacement]
+
+並透過 update instruction 告知 supersede 舊 ordered record。
+
+若無法確定是否真的已執行：
+
+不可自行 replacement。
+
+---
+
+# 二十六、Historical data conflict
+
+例如 Old：
+
+2026-07-10    Creatinine    1.2 mg/dL
+
+New：
+
+2026-07-10    Creatinine    2.1 mg/dL
+
+且沒有足夠證據判斷哪個是正式修正版：
+
+New 是 MedBench 尚未看過的重要衝突資料。
+
+應輸出 New：
+
+2026-07-10    Creatinine    2.1 mg/dL    [source data inconsistent with previous record]
+
+不要自行刪除 Old。
+
+不要自行決定哪一個正確。
+
+---
+
+# 二十七、不要把跨日期相似紀錄當 duplicate
+
+例如：
+
+2026-09-08 Progress Note
+
+與：
+
+2026-09-09 Progress Note
+
+即使內容幾乎完全相同：
+
+仍為不同 longitudinal record。
+
+都必須保留。
+
+同理：
+
+* 不同 chemotherapy date
+* 不同 lab date
+* 不同 imaging date
+* 不同 admission
+* 不同 outpatient encounter
+
+都不可只因內容相似而去重。
+
+---
+
+# 二十八、Delta root-level section 順序
+
+Delta 中只輸出實際有更新的 section。
+
+順序仍使用 canonical order：
+
+[update instruction]
+
+[allergy]
+
+[vital signs]
+
+[active medication]
+
+[valid medication]
+
+[lab data]
+
+[exam finding]
+
+[MedRec]
+
+[consultation]
+
+[surgical operation]
+
+[radiotherapy]
+
+[chemotherapy]
+
+必要時：
+
+[immunochemotherapy]
+
+沒有更新的 section 完全省略。
+
+---
+
+# 二十九、[update instruction] 使用規則
+
+`[update instruction]` 只有在以下情況出現：
+
+1. Snapshot section 有變化，需要取代舊 snapshot。
+2. Snapshot section 從 New 消失，需要移除舊 snapshot。
+3. 有 `[replacement]` historical record。
+
+如果只是單純新增 longitudinal records：
+
+不需要 `[update instruction]`。
+
+可能格式：
+
+[update instruction]
+
+* Snapshot sections included below supersede and replace all previous versions of the same sections.
+* Remove the previous [active medication] snapshot; New contains no current [active medication] section.
+* Records marked [replacement] supersede the previous record with the same date and record identity.
+
+只列真正需要的 instruction。
+
+---
+
+# 三十、不要輸出 diff 報告
+
+最終不要寫：
+
+Added:
+Removed:
+Changed:
+Unchanged:
+Old:
+New:
+Difference:
+
+除了必要的 `[update instruction]` 外，
+
+直接輸出 MedBench 真正需要接收的病歷內容。
+
+---
+
+# 三十一、不要重新輸出 unchanged Old content
+
+最終 Delta 不應包含：
+
+* Old 已經看過的相同 lab
+* Old 已經看過的相同 imaging
+* Old 已經看過的相同 SOAP
+* Old 已經看過的相同 Progress Note
+* Old 已經看過的相同 POMR
+* Old 已經看過的相同 consultation
+* Old 已經看過的相同 surgery
+* Old 已經看過的相同 RT
+* Old 已經看過的相同 chemotherapy
+
+除非：
+
+它是 replacement record。
+
+---
+
+# 三十二、不要對 record 內部做句子級差集
+
+這點非常重要。
+
+假設 Old POMR：
+
+2026-06-01 ~ 2026-06-10 POMR
+
+* Hospital Course
+
+  * A
+  * B
+
+New POMR：
+
+2026-06-01 ~ 2026-06-10 POMR
+
+* Hospital Course
+
+  * A
+  * B
+  * C
+* Discharge Medication
+
+  * Drug X
+
+若可確認為同一份 POMR 的完整新版：
+
+不要只輸出：
+
+* C
+* Drug X
+
+而應輸出完整 New POMR，標示：
+
+[replacement]
+
+Clinical record 必須維持完整性。
+
+---
+
+# 三十三、排序
+
+Snapshot section：
+
+保留 New 的合理排序。
+
+Longitudinal section：
+
+只對 Delta records 本身由新到舊排序。
+
+不需要重建整個 Old chronology，因為 MedBench Chat 已經擁有 Old。
+
+例如 Delta：
+
+[MedRec]
+
+2026-09-11 Progress Note ...
+
+2026-09-10 Progress Note ...
+
+2026-09-01 ~ 2026-09-09 POMR ...
+
+---
+
+# 三十四、格式
+
+維持與 canonical standardized medical record 相同的 plain text Markdown。
+
+所有 bullet 只能使用：
+
+*
+
+每層使用兩個半形空白縮排。
+
+不使用：
+
+*
+
+-
+
+•
+Markdown table
+粗體
+
+不同 record 之間留一個空白段落。
+
+---
+
+# 三十五、輸出前必做檢查
+
+輸出前逐項確認：
+
+1. Old 是否代表 MedBench 已知資料。
+2. New 是否為較新完整 canonical record。
+3. 是否沒有把整份 New 直接輸出。
+4. 是否沒有重送完全 unchanged 的 snapshot。
+5. snapshot 有變化時，是否輸出完整 New section，而不是只有 changed lines。
+6. New 缺少 Old snapshot section 時，是否明確要求移除舊 snapshot。
+7. 是否沒有把舊 active medication 留成目前用藥。
+8. 是否 longitudinal 只輸出 novel records。
+9. 是否 replacement record 保持完整。
+10. 是否沒有做 sentence-level diff。
+11. 是否沒有過度 semantic deduplication。
+12. 是否不同日期的相似 records 被保留為不同事件。
+13. 是否新的 POMR 即使重述舊 daily notes，仍完整輸出。
+14. 是否沒有重新輸出 POMR 所涵蓋的舊 Progress Notes。
+15. 是否新的 consultation 正確加入。
+16. 是否新的 surgery 正確加入。
+17. 是否新的 RT 正確加入。
+18. 是否新的 chemotherapy 正確加入。
+19. 是否 historical conflicts 沒有被擅自解決。
+20. 是否 planned 與 completed treatment 沒有被錯誤混淆。
+21. 是否沒有重新摘要或改寫 Old。
+22. 是否沒有新增臨床推論。
+23. 是否只輸出真正需要 MedBench 接收的更新資料。
+24. 是否每個 root-level section 最多出現一次。
+25. 是否沒有內容的 section 完全省略。
+
+---
+
+# 三十六、輸出範例
+
+假設 Old 已經有：
+
+* 舊 active medication
+* 2026-09-08 labs
+* 2026-09-08 Progress Note
+* 2026-09-09 Progress Note
+* 2026-09-03 chemotherapy
+
+New：
+
+* active medication 已改變
+* 新增 2026-09-10 labs
+* 新增 2026-09-10、2026-09-11 Progress Notes
+* hospitalization 已於 2026-09-11 出院並新增 POMR
+* 新增 2026-09-10 chemotherapy
+
+Delta 應類似：
+
+[update instruction]
+
+* Snapshot sections included below supersede and replace all previous versions of the same sections.
+
+[active medication]
+
+* Drug A ...
+* Drug C ...
+
+[lab data]
+
+2026-09-10    WBC                           ...
+2026-09-10    HGB                           ...
+
+[MedRec]
+
+2026-09-01 ~ 2026-09-11 POMR Hemato-Oncology Physician
+
+* Discharge Diagnosis
+
+  * ...
+* Chief Complaint
+
+  * ...
+* History of Present Illness
+
+  * ...
+* Hospital Course
+
+  * ...
+* Discharge Medication
+
+  * ...
+
+2026-09-11 Progress Note Hemato-Oncology Physician
+
+* S
+
+  * ...
+* O
+
+  * ...
+* A
+
+  * ...
+* P
+
+  * ...
+
+2026-09-10 Progress Note Hemato-Oncology Physician
+
+* S
+
+  * ...
+* O
+
+  * ...
+* A
+
+  * ...
+* P
+
+  * ...
+
+[chemotherapy]
+
+* 2026-09-10 - Drug ...
+
+不要再次輸出：
+
+* 2026-09-08 labs
+* 2026-09-08 Progress Note
+* 2026-09-09 Progress Note
+* 2026-09-03 chemotherapy
+
+因為 MedBench 已經看過。
+
+---
+
+# 三十七、沒有任何更新時
+
+若比較 Old 與 New 後：
+
+* snapshot 完全相同
+* 沒有 novel longitudinal record
+* 沒有 replacement
+* 沒有新的 conflict
+
+則最終只輸出：
+
+NO UPDATE
+
+不得重送資料。
+
+---
+
+# 三十八、最終輸出限制
+
+最終回答必須完整置於單一 fenced code block 中。
+
+code block 外不得輸出任何文字。
+
+不要輸出：
+
+* 比對分析
+* Old
+* New
+* 完整 Update
+* merge report
+* unchanged records
+* duplicate list
+* reasoning
+* 解釋
+* 統計
+* 問題或確認要求
+
+最終只輸出：
+
+「現有 MedBench Chat 尚未看過，而且需要知道的更新內容」。
+
+若有 snapshot replacement 或 record replacement，加入必要的 `[update instruction]`。
+
+現在請比較目前提供或目前 context 中既有的 Old 與 New，產生 MedBench Delta Update。
