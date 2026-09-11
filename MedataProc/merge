@@ -1,0 +1,1315 @@
+# 任務：將同一病人不同時間點的 Old 與 New 標準化病歷合併成 Update 版本
+
+你會收到同一位病人的兩份已整理完成之 standardized medical record：
+
+* `Old`：較早時間點產生的完整標準化病歷
+* `New`：較晚時間點重新由原始資料產生的完整標準化病歷
+
+兩份資料都已經使用相同 canonical schema 整理。
+
+你的任務不是重新摘要、重新整理病歷內容，也不是重新判讀原始醫療資料。
+
+你的任務是：
+
+1. 從 `Old` 移除舊的 snapshot sections，得到 `Old'`。
+2. 以 `New` 的 snapshot sections 完整取代舊 snapshot。
+3. 比較 `New` 與 `Old` 的 longitudinal records。
+4. 找出 `New` 中 `Old` 尚不存在的新 longitudinal records，形成 `New'`。
+5. 必要時以 `New` 中較完整、較正式的同一筆 record 取代 `Old` 中較不完整版本。
+6. 保留 `Old` 既有 longitudinal records 的原始內容不變。
+7. 將所有內容依 canonical root-level section 重新組合。
+8. 每個 longitudinal section 內依日期由新到舊排序。
+9. 最終輸出一份完整的 `Update` 版本。
+
+這是一項：
+
+`canonical structured merge / incremental update`
+
+不是：
+
+* 摘要
+* 病歷重寫
+* 醫療判斷
+* 病歷評論
+* semantic rewriting
+
+---
+
+# 一、輸入格式
+
+輸入將包含：
+
+[OLD]
+
+...較早版本的標準化病歷...
+
+[NEW]
+
+...較新版本的標準化病歷...
+
+`[OLD]` 與 `[NEW]` 只是輸入分隔符號。
+
+最終輸出時不可保留：
+
+[OLD]
+
+[NEW]
+
+---
+
+# 二、最重要的核心原則
+
+必須遵守：
+
+1. Old 與 New 屬於同一位病人。
+2. Old 與 New 已經完成格式整理，不需要重新對內容進行全面重寫。
+3. Old 中既有 longitudinal record 原則上視為 immutable。
+4. 不得因為 New 的寫法不同，就重新改寫 Old。
+5. Snapshot sections 使用 New 完整取代 Old。
+6. Longitudinal sections 使用：
+
+   * append
+   * deduplicate
+   * replace-more-complete-record
+7. 不可單純用字串 diff。
+8. 不可單純把整份 New 貼在 Old 前面。
+9. 不可產生重複的 root-level section。
+10. 不可因語義類似而過度去重。
+11. 醫療資料去重時，寧可保留疑似重複，也不可誤刪不同日期、不同來源或不同病程階段的重要紀錄。
+12. 不得新增來源不存在的臨床內容。
+13. 不得自行診斷、推論或修正醫療事實。
+14. 不得把 planned treatment 改成 completed treatment。
+15. 不得把不同 hospitalization episode、不同療程或不同 encounter 誤合併。
+
+---
+
+# 三、Canonical root-level section 與固定順序
+
+最終 Update 只使用以下 root-level section，並依此固定順序排列：
+
+[allergy]
+
+[vital signs]
+
+[active medication]
+
+[valid medication]
+
+[lab data]
+
+[exam finding]
+
+[MedRec]
+
+[consultation]
+
+[surgical operation]
+
+[radiotherapy]
+
+[chemotherapy]
+
+必要時可使用：
+
+[immunochemotherapy]
+
+沒有內容的 section 必須省略。
+
+不可建立其他 root-level section。
+
+---
+
+# 四、Snapshot sections
+
+以下四個 section 定義為 snapshot：
+
+[allergy]
+
+[vital signs]
+
+[active medication]
+
+[valid medication]
+
+Snapshot 表示：
+
+「New 產生時間點當下的目前狀態」。
+
+因此：
+
+Snapshot(Update) = Snapshot(New)
+
+---
+
+# 五、Snapshot merge 規則
+
+## 1. Old snapshot 全部刪除
+
+建立 `Old'` 時，完整移除 Old 中：
+
+[allergy]
+
+[vital signs]
+
+[active medication]
+
+[valid medication]
+
+不要保留舊 snapshot。
+
+---
+
+## 2. New snapshot 完整保留
+
+New 中存在的 snapshot section：
+
+完整放入 Update。
+
+不要將 New snapshot 與 Old snapshot 做差集。
+
+例如：
+
+Old：
+
+[active medication]
+
+* Drug A
+* Drug B
+
+New：
+
+[active medication]
+
+* Drug A
+
+Update 必須是：
+
+[active medication]
+
+* Drug A
+
+不可因 Old 曾有 Drug B 而保留 Drug B。
+
+---
+
+## 3. New 沒有某個 snapshot section
+
+如果 New 完全沒有某個 snapshot section：
+
+例如沒有：
+
+[allergy]
+
+則 Update 也不要從 Old 繼承舊 `[allergy]`。
+
+Snapshot 一律以 New 為準。
+
+例外：
+
+只有在輸入明確指出：
+
+`New 為不完整 partial update`
+
+才可考慮保留 Old snapshot。
+
+一般情況不得自行假設 New 不完整。
+
+---
+
+# 六、Longitudinal sections
+
+以下屬 longitudinal sections：
+
+[lab data]
+
+[exam finding]
+
+[MedRec]
+
+[consultation]
+
+[surgical operation]
+
+[radiotherapy]
+
+[chemotherapy]
+
+[immunochemotherapy]
+
+它們代表病人歷史上已發生的事件或紀錄。
+
+處理原則：
+
+# Longitudinal(Update)
+
+Longitudinal(Old)
++
+真正新增的 Longitudinal(New)
++
+必要的 New replacement records
+
+---
+
+# 七、Old longitudinal 必須保持 immutable
+
+Old 中既有 longitudinal record：
+
+除非符合「同一 record 的較完整 New 版本取代 Old」規則，否則：
+
+* 不改寫文字
+* 不重新摘要
+* 不重新翻譯
+* 不修正文法
+* 不改藥品格式
+* 不改疾病名稱
+* 不改 note type
+* 不改標題
+* 不改日期
+* 不改 section 層級
+* 不改 record 內部 bullet 順序
+* 不重新組織 record 內容
+
+唯一允許改變：
+
+該完整 record 在 section 中的位置可以因日期排序而移動。
+
+---
+
+# 八、不要使用過度 semantic deduplication
+
+不得僅因兩段文字語義相似就判定為 duplicate。
+
+例如：
+
+Old：
+
+* Progressive dyspnea
+
+New：
+
+* Shortness of breath worsened
+
+若：
+
+* 日期不同
+* encounter 不同
+* note type 不同
+* 或 record identity 不同
+
+必須視為不同 clinical event。
+
+只有在以下條件足夠一致時，才可視為相同 record：
+
+* 日期或日期範圍相同
+* record type 相同
+* clinical event identity 相同
+* 來源脈絡相同
+* 內容實質相同
+
+如果不確定是否為 duplicate：
+
+保留。
+
+---
+
+# 九、Record identity：一般原則
+
+每個 longitudinal record 必須先辨認其 identity。
+
+不要逐行比對。
+
+一筆 record 是具有獨立日期與臨床意義的完整單位。
+
+例如：
+
+2026-09-10 Progress Note Hemato-Oncology
+
+* S
+
+  * ...
+* O
+
+  * ...
+* A
+
+  * ...
+* P
+
+  * ...
+
+這整段是一個 record。
+
+不能把其中每個 bullet 當成獨立 record。
+
+---
+
+# 十、[lab data] merge 規則
+
+## A. 一般單行 laboratory result
+
+record identity：
+
+日期
++
+檢驗項目
++
+結果
++
+單位
+
+例如：
+
+2026-09-10    WBC    7.41    ×10^3/μL
+
+若 Old 已完全存在：
+
+不加入 New'。
+
+若 New 是不同日期：
+
+保留。
+
+若同日期同項目但結果不同：
+
+不得自行決定哪個正確。
+
+兩者都保留，或在必要時標示：
+
+[source data inconsistent]
+
+不可直接覆蓋。
+
+---
+
+## B. Culture / microbiology
+
+以下整份視為一個 record：
+
+2026-09-08 Sputum culture
+
+* Specimen
+
+  * ...
+* Organism
+
+  * ...
+* Susceptibility
+
+  * ...
+
+identity：
+
+date
++
+culture type
++
+specimen
+
+內容完全相同：
+
+視為 duplicate。
+
+New 比 Old 多出較完整 susceptibility：
+
+可使用 New 版本取代 Old。
+
+---
+
+## C. 特殊檢驗
+
+例如：
+
+* Bone marrow chromosome
+* Flow cytometry
+* Molecular test
+* PCR panel
+
+以：
+
+date
++
+test name
++
+specimen if available
+
+判斷 identity。
+
+New 若只是同一正式報告的較完整版本：
+
+使用 New replacement。
+
+---
+
+# 十一、[exam finding] merge 規則
+
+每一份正式檢查報告視為一個 record。
+
+identity 建議：
+
+date
++
+examination type
++
+body site / specimen
+
+例如：
+
+2026-09-08 CXR
+
+2026-08-21 CT - chest, abdomen, and pelvis
+
+2026-06-04 Pathology - oral cancer
+
+---
+
+## 1. 完全相同
+
+Old 與 New 同日期、同檢查且內容相同：
+
+只保留 Old record。
+
+不要重複加入 New。
+
+---
+
+## 2. New 為較完整正式版本
+
+例如：
+
+Old：
+
+2026-09-08 CXR
+
+* Bilateral infiltrates
+
+New：
+
+2026-09-08 CXR
+
+* Bilateral infiltrates
+* Small bilateral pleural effusions
+* Port-A in place
+
+如果可以明確判定：
+
+這是同一次檢查的同一份報告，只是 New 較完整，
+
+則：
+
+* 移除 Old 的較短 record。
+* 使用 New 的完整 record。
+
+這稱為：
+
+`replacement`
+
+不是 append。
+
+---
+
+## 3. 同日期但不同檢查
+
+例如：
+
+2026-09-08 CXR
+
+與：
+
+2026-09-08 CT - chest
+
+兩者都保留。
+
+---
+
+## 4. 同日期同類檢查但內容明顯不同
+
+若無法確認是否同一 report：
+
+兩者都保留。
+
+不可自行選一份。
+
+---
+
+# 十二、[MedRec] merge 規則
+
+MedRec 必須以完整 clinical note 為 record unit。
+
+常見 record type：
+
+* SOAP
+* ED
+* Admission Note
+* Progress Note
+* Weekly Summary
+* POMR
+* SDM
+* MultiTeam
+* 其他 longitudinal clinical note
+
+identity 通常由：
+
+date / date range
++
+note type
++
+department
++
+physician if available
+
+組成。
+
+---
+
+## 1. SOAP
+
+例如：
+
+2026-08-25 SOAP Hemato-Oncology Physician
+
+若 Old 已有完全相同 record：
+
+不加入。
+
+若 New 同日期同 SOAP 但內容較完整：
+
+可 replacement。
+
+若同日期不同科別：
+
+分開保留。
+
+---
+
+## 2. Admission Note
+
+identity：
+
+admission date
++
+Admission Note
++
+department
+
+同一次 admission 的較完整 New version 可 replacement。
+
+---
+
+## 3. Progress Note
+
+identity：
+
+date
++
+Progress Note
++
+department
++
+physician if available
+
+不同日期即為不同 record。
+
+即使內容高度相似，也不可因文字重複而刪除。
+
+---
+
+## 4. Weekly Summary
+
+identity：
+
+date / period
++
+Weekly Summary
++
+department
+
+若 Old 無此 weekly summary：
+
+新增。
+
+若 Old 已有同一份：
+
+不重複。
+
+---
+
+## 5. POMR
+
+identity：
+
+hospitalization start date
++
+hospitalization end date
++
+POMR
++
+department
+
+同一次 hospitalization 若 New POMR 明顯比 Old POMR 完整：
+
+可 replacement。
+
+---
+
+# 十三、Current hospitalization 後來出院的特殊情況
+
+這是重要例外。
+
+例如 Old：
+
+2026-09-01 Admission Note
+
+2026-09-03 Progress Note
+
+2026-09-05 Weekly Summary
+
+2026-09-08 Progress Note
+
+New 後來多出：
+
+2026-09-01 ~ 2026-09-10 POMR
+
+這代表原本 ongoing hospitalization 已完成。
+
+基本模式採：
+
+`lossless longitudinal history`
+
+因此：
+
+* 新 POMR 新增。
+* 舊 Admission Note 保留。
+* 舊 Progress Notes 保留。
+* 舊 Weekly Summary 保留。
+
+不要因 POMR 出現就自動刪除舊住院 notes。
+
+最終可以為：
+
+2026-09-01 ~ 2026-09-10 POMR ...
+
+2026-09-08 Progress Note ...
+
+2026-09-05 Weekly Summary ...
+
+2026-09-03 Progress Note ...
+
+2026-09-01 Admission Note ...
+
+除非使用者明確要求：
+
+`compact hospitalization mode`
+
+否則一律採 lossless mode。
+
+---
+
+# 十四、[consultation] merge 規則
+
+每次 consultation identity：
+
+date
++
+consulting specialty
+
+如果同一天同科別有明確不同 consultation reason：
+
+可保留多筆。
+
+New 為同一次 consult 的較完整 request/reply：
+
+使用 New replacement。
+
+不能因會診背景與 POMR 重複而刪除 consultation。
+
+---
+
+# 十五、[surgical operation] merge 規則
+
+每次 operation identity：
+
+date
++
+operation name / procedure
+
+例如：
+
+2026-06-03
+
+* Surgery
+
+  * Right modified radical neck dissection
+
+Old 已存在相同正式 operation record：
+
+不加入 New duplicate。
+
+若 New 多出同次 surgery 的完整 intraoperative finding：
+
+可 replacement。
+
+同日若有兩個不同 operation：
+
+兩筆都保留。
+
+---
+
+# 十六、[radiotherapy] merge 規則
+
+identity：
+
+treatment date / period
++
+treatment site
++
+dose / fractionation if available
+
+例如：
+
+* 2026-06-22 ~ 2026-06-29 - 1800cGy/6 fractions to T6
+
+完全相同：
+
+不重複。
+
+planned 與 completed 不可視為完全相同 record。
+
+例如：
+
+Old：
+
+* 2026-06-22 - Planned radiotherapy: 1800cGy/6 fractions to T6
+
+New：
+
+* 2026-06-22 ~ 2026-06-29 - 1800cGy/6 fractions to T6
+
+兩者反映不同時間點的臨床狀態。
+
+除非 New 明確是同一療程完成後的正式最終紀錄，否則不要自行刪除 planned record。
+
+若明確可判斷 New completed record supersedes 同一療程的 provisional planning record，可保留 completed record並移除純重複的 technical planning entry；若有疑義，兩者均保留。
+
+---
+
+# 十七、[chemotherapy] merge 規則
+
+每次 chemotherapy record identity：
+
+date / date range
++
+regimen
++
+principal antineoplastic agents
+
+例如：
+
+* 2026-09-03 - Keytruda + Padcev
+
+Old 已存在：
+
+不重複。
+
+New：
+
+* 2026-09-10 - Padcev
+
+為新 treatment event：
+
+新增。
+
+---
+
+## 同日期但劑量不同
+
+不可當 duplicate。
+
+例如：
+
+Old：
+
+* 2026-09-03 - Drug A 100mg
+
+New：
+
+* 2026-09-03 - Drug A 80mg
+
+若無法確認哪筆正確：
+
+兩者都保留或標示來源不一致。
+
+不可自行選擇。
+
+---
+
+## Ordered vs administered
+
+Old：
+
+* 2026-09-03 - Drug A regimen ordered
+
+New：
+
+* 2026-09-03 - Drug A 100mg administered
+
+若 New 明確是同一療程後續正式 administration record：
+
+可使用 New 較完整 record取代單純 ordered record。
+
+但不可在沒有明確證據時自行假設 treatment 已完成。
+
+---
+
+# 十八、[immunochemotherapy]
+
+若 Old 或 New 使用：
+
+[immunochemotherapy]
+
+則依與 `[chemotherapy]` 相同邏輯處理。
+
+不要自行把：
+
+[immunochemotherapy]
+
+改名為：
+
+[chemotherapy]
+
+反之亦然。
+
+除非 New canonical format 已明確重新分類同一 event，且可確定是同一份 record。
+
+---
+
+# 十九、Replacement 規則
+
+只有明確屬於：
+
+「同一日期、同一事件、同一正式 record」
+
+而 New 比 Old：
+
+* 更完整
+* 更正式
+* 包含 Old 全部核心內容
+* 另增加正式結果、完整 findings、正式 diagnosis、正式 reply 或正式 discharge information
+
+時，才可使用 New 取代 Old。
+
+Replacement 不可只因：
+
+* New 寫得比較漂亮
+* New 語法比較通順
+* New 使用不同 wording
+* New 看起來比較簡潔
+* New 看起來比較合理
+
+而發生。
+
+若不能高度確定：
+
+不要 replacement。
+
+保留 Old，New 視情況另存。
+
+---
+
+# 二十、Novel New record 的判斷
+
+一筆 New longitudinal record 若符合以下任一條件，視為 novel：
+
+1. Old 完全沒有該日期與該 event。
+2. Old 沒有該 note type。
+3. Old 沒有該 examination。
+4. Old 沒有該 laboratory result。
+5. Old 沒有該 treatment date。
+6. Old 沒有該 surgery。
+7. Old 沒有該 consultation。
+8. Old 沒有該 hospitalization POMR。
+9. 同日期但臨床事件 identity 不同。
+10. 同日期但為明確不同 treatment cycle / regimen。
+
+Novel record 必須加入 Update。
+
+---
+
+# 二十一、不要將 New' 當作完整 section 貼到 Old'
+
+概念上：
+
+Old' = Old longitudinal
+
+New' = New snapshot + New longitudinal delta
+
+但輸出時不可產生：
+
+[lab data]
+New ...
+
+[lab data]
+Old ...
+
+必須 section-wise merge：
+
+[lab data]
+
+New novel records
++
+Old records
+
+並重新依日期排序。
+
+同理：
+
+[exam finding]
+[MedRec]
+[consultation]
+[surgical operation]
+[radiotherapy]
+[chemotherapy]
+
+各 section 只能出現一次。
+
+---
+
+# 二十二、最終 merge 公式
+
+概念上：
+
+# Update
+
+Snapshot(New)
++
+CanonicalMerge(
+Longitudinal(Old),
+NovelLongitudinal(New),
+ReplacementRecords(New)
+)
+
+更簡化地說：
+
+Snapshot = Replace
+
+Longitudinal = Append + Deduplicate
+
+Old longitudinal = Immutable
+
+New more-complete same record = Replace Old record
+
+---
+
+# 二十三、Section 內排序
+
+## Snapshot
+
+保留 New 原本合理順序。
+
+`[vital signs]` 若有多個時間點：
+
+由新到舊。
+
+---
+
+## Longitudinal
+
+原則：
+
+由新到舊。
+
+### [lab data]
+
+由日期新到舊。
+
+同日期盡量維持原本 New / Old 中合理順序。
+
+### [exam finding]
+
+由檢查日期新到舊。
+
+### [MedRec]
+
+以 record date 或 hospitalization end date 由新到舊。
+
+例如：
+
+2026-09-11 Progress Note
+
+2026-09-10 Progress Note
+
+2026-09-01 ~ 2026-09-10 POMR
+
+2026-09-08 Progress Note
+
+如果要避免 hospitalization chronology 被打散，可將同一 hospitalization 的 POMR 與其 notes視為同一 episode group：
+
+* episode 以 end date 排序
+* episode 內 POMR 優先
+* 其餘 note 由新到舊
+
+但不可改寫 record 本身。
+
+### Consultation / Surgery / RT / Chemotherapy
+
+由日期新到舊。
+
+---
+
+# 二十四、空 section
+
+合併後若某 section 完全沒有內容：
+
+省略。
+
+不可輸出：
+
+[allergy]
+
+然後空白。
+
+---
+
+# 二十五、Markdown 格式
+
+維持 canonical plain text Markdown。
+
+所有 bullet：
+
+`- `
+
+每層兩個半形空白。
+
+不可使用：
+
+*
+
+-
+
+•
+Markdown table
+粗體
+
+不同 records 之間留一個空白段落。
+
+同一階層 list 內不插入多餘空白行。
+
+---
+
+# 二十六、不得重新格式化 Old longitudinal
+
+即使 Old 與 New 的格式略有差異，只要 Old record 本身仍符合 canonical Markdown：
+
+Old longitudinal record 必須原樣保留。
+
+例如 Old 寫：
+
+* History
+
+而 New 常用：
+
+* History of Present Illness
+
+不得為一致性而把 Old 改寫。
+
+例如 Old 寫：
+
+* A/P
+
+不得擅自改成：
+
+* Assessment
+* Plan
+
+這是為了避免每次更新造成歷史版本漂移。
+
+---
+
+# 二十七、資料衝突
+
+若 Old 與 New 對同一 historical event 出現實質衝突，例如：
+
+Old：
+
+2026-07-10    Creatinine    1.2 mg/dL
+
+New：
+
+2026-07-10    Creatinine    2.1 mg/dL
+
+不得自行判斷。
+
+若不是明顯較完整正式 record 的 replacement：
+
+兩者保留，必要時加入：
+
+[source data inconsistent]
+
+同理適用：
+
+* diagnosis
+* stage
+* dose
+* pathology
+* date
+* culture result
+* treatment status
+
+---
+
+# 二十八、輸出前檢查
+
+輸出前逐項確認：
+
+1. Old 與 New 是否被視為同一位病人。
+2. 是否完全移除 Old snapshot。
+3. 是否使用 New snapshot。
+4. 是否沒有把 Old snapshot 混入 Update。
+5. 是否保留 Old 所有 longitudinal history。
+6. 是否沒有任意改寫 Old longitudinal record。
+7. 是否找出 New 中真正新增的 longitudinal records。
+8. 是否沒有將完全相同 record 重複加入。
+9. 是否沒有用模糊語義相似度過度去重。
+10. 是否在同一正式 record 的 New 較完整版本出現時正確 replacement。
+11. 是否沒有把不同日期的 events 合併。
+12. 是否沒有把不同 hospitalization episode 合併。
+13. 是否保留 current hospitalization 後來完成時的既有 Admission/Progress/Weekly notes。
+14. 是否新增正式 POMR。
+15. 是否沒有因 POMR 出現而自動刪除舊 progress notes。
+16. 是否正確處理 lab。
+17. 是否正確處理 culture。
+18. 是否正確處理 exam finding。
+19. 是否正確處理 SOAP。
+20. 是否正確處理 Admission Note。
+21. 是否正確處理 Progress Note。
+22. 是否正確處理 Weekly Summary。
+23. 是否正確處理 POMR。
+24. 是否正確處理 consultation。
+25. 是否正確處理 surgery。
+26. 是否正確處理 radiotherapy。
+27. 是否正確處理 chemotherapy。
+28. 是否沒有把 planned treatment 錯寫成 administered/completed。
+29. 是否每個 root-level section 只出現一次。
+30. 是否依 canonical root-level 順序輸出。
+31. 是否 longitudinal section 內大致由新到舊。
+32. 是否移除空 section。
+33. 是否沒有建立新的 root-level section。
+34. 是否沒有新增臨床推論。
+35. 是否完整保留有意義的 historical record。
+
+---
+
+# 二十九、Canonical output skeleton
+
+沒有資料的 section 必須省略。
+
+[allergy]
+
+* New snapshot only
+
+[vital signs]
+
+New snapshot only
+
+[active medication]
+
+New snapshot only
+
+[valid medication]
+
+New snapshot only
+
+[lab data]
+
+New novel / replacement records
++
+Old historical records
+→ date descending
+
+[exam finding]
+
+New novel / replacement records
++
+Old historical records
+→ date descending
+
+[MedRec]
+
+New novel records
++
+Old historical records
++
+new completed POMR if applicable
+→ episode/date descending
+
+[consultation]
+
+New novel / replacement records
++
+Old records
+
+[surgical operation]
+
+New novel / replacement records
++
+Old records
+
+[radiotherapy]
+
+New novel / replacement records
++
+Old records
+
+[chemotherapy]
+
+New novel / replacement records
++
+Old records
+
+---
+
+# 三十、最終輸出限制
+
+最終回答只能包含完成合併後的 `Update` 病歷。
+
+最終回答必須完整放在單一 fenced code block 中。
+
+code block 外不得輸出任何文字。
+
+不要輸出：
+
+* Old'
+* New'
+* delta
+* diff
+* merge report
+* duplicate list
+* replacement list
+* 以下是更新結果
+* 我已完成
+* 分析過程
+* 比對說明
+* 修改紀錄
+* 統計
+* 註解
+* 問題
+* 確認要求
+
+不要輸出 `[OLD]` 或 `[NEW]`。
+
+直接從 Update 中第一個實際存在的 canonical root-level section 開始。
+
+---
+
+# 三十一、待處理資料
+
+接下來會提供：
+
+[OLD]
+
+較早日期的 canonical standardized medical record
+
+[NEW]
+
+較新日期的 canonical standardized medical record
+
+請依照以上規則產生唯一的 Update 版本。
