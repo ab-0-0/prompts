@@ -2,36 +2,94 @@
 
 你會收到一份屬於單一病人的尚未整理醫療病歷原始資料。
 
-請將這份資料完整整理成指定格式。
+原始資料的格式可能包含：
 
-這是一項「格式轉換與資料重組」工作，不是摘要、診斷、醫療評估或病歷評論工作。
+* 病患基本資料
+* 目前住院處方
+* 門診現在用藥
+* 化學治療紀錄
+* 檢驗
+* 細菌培養及藥敏
+* 生命徵象
+* 血糖
+* 各類檢查
+* 門診紀錄
+* 急診紀錄
+* Admission Note
+* Progress Note
+* Weekly Summary
+* POMR
+* 出院摘要
+* 出院帶藥
+* 會診
+* 手術
+* 放射治療
+* 化學治療
+* 以及出現在文件後半段的其他病歷內容
 
-請完整閱讀整份原始資料直到真正結尾後，再進行分類、去除雜訊、整理日期、重建層級與輸出。
+請將整份資料完整整理成下列指定格式。
+
+這是一項「格式轉換、資料重組與 longitudinal medical record reconstruction」工作，不是摘要、診斷、醫療評估或病歷評論工作。
+
+必須完整閱讀整份原始資料直到真正結尾後，再進行分類、日期標準化、去除雜訊、去重、住院 episode 辨識、病歷 note type 辨識、層級重建與輸出。
 
 ---
 
 # 一、最重要的工作原則
 
-必須遵守以下原則：
-
 1. 本次輸入的全部內容視為同一位病人的單一病歷資料。
-2. 必須完整閱讀整份原始資料直到真正結尾，不可看到「出院帶藥紀錄」就停止。
-3. 「出院帶藥紀錄」後方仍可能有現病史、住院摘要、檢驗、影像、病理或其他重要資料。
-4. 只重整來源已提供的資訊。
-5. 不得自行診斷。
-6. 不得自行推測缺失內容。
-7. 不得自行修改藥物劑量、治療日期、病理結果或疾病分期。
-8. 不得把「疑似」、「考慮」、「可能」、「無法排除」改成確定診斷。
-9. 不得把「治療計畫」或「化療處方簽」直接寫成已完成治療，除非來源明確記載已實際給藥。
-10. 不要輸出分析過程、解釋、前言或結語。
-11. 最後只輸出整理完成的病歷內容。
-12. 整份輸入必須保持為單一處理單位，不進行病人文件切割。
+2. 整份輸入保持為單一處理單位，不進行病人文件切割。
+3. 必須完整閱讀整份資料直到真正結尾。
+4. 不可看到「出院帶藥紀錄」就停止；其後仍可能存在 Admission Note、Progress Note、Weekly Summary、POMR、檢驗、影像、病理或其他重要資料。
+5. 只重整來源明確提供的資訊。
+6. 不得自行診斷。
+7. 不得自行補充缺失內容。
+8. 不得自行修改藥物劑量、治療日期、病理結果、分期、基因結果、菌名或其他臨床資料。
+9. 不得把「疑似」、「考慮」、「可能」、「無法排除」改成確定診斷。
+10. 不得把「治療計畫」、「化療處方簽」、「planned radiotherapy」直接寫成已完成治療，除非來源明確記載實際執行。
+11. 不得因臨床常識而補齊來源沒有記載的內容。
+12. 若資料無法可靠判定，保留來源可確認內容；必要時標示 `[source data unclear]`。
+13. 不輸出分析過程、解釋、前言、刪除內容說明或結語。
+14. 最終只輸出整理完成的病歷內容。
 
 ---
 
-# 二、輸出區段與固定順序
+# 二、資料時間基準
 
-這份病歷資料依下列順序輸出：
+原始資料通常包含：
+
+`藥師評估報告產出時間`
+
+此時間雖然最後不輸出，但可作為判斷以下內容的 snapshot reference time：
+
+* `[active medication]`
+* `[valid medication]`
+
+例如：
+
+藥師評估報告產出時間：2026-09-11 14:07
+
+則判斷目前住院藥物及仍有效門診藥物時，以：
+
+2026-09-11 14:07
+
+作為資料產生當時的時間點。
+
+若沒有明確的資料產生時間，不可自行猜測 snapshot time；只能依原始資料明確標示的「目前」、「現在用藥」或有效日期判斷。
+
+---
+
+# 三、Root-level 輸出區段與固定順序
+
+輸出時只能使用下列 root-level section，順序固定如下：
+
+[allergy]
+
+[vital signs]
+
+[active medication]
+
+[valid medication]
 
 [lab data]
 
@@ -51,1461 +109,1249 @@
 
 [immunochemotherapy]
 
-沒有資料的區段必須省略。
+沒有資料的區段必須完全省略。
 
-例如沒有手術資料時，不要輸出空白的：
+例如沒有明確 allergy 資料時，不要輸出空白的：
 
-[surgical operation]
+[allergy]
 
-不可建立下列額外區段：
+不可任意建立其他 root-level section，例如：
 
 [patient information]
-[vital signs]
 [prescription]
-[allergy]
 [discharge medication]
 [microbiology]
 [radiology]
+[outpatient]
+[inpatient]
+[emergency]
 
-這些內容必須依下方規則放入既定區段，或在沒有必要時省略。
-
----
-
-# 三、原始資料與輸出區段的對應方式
-
-請依下列規則分類。
-
-## 1. 放入 [lab data]
-
-原始標題或內容包括：
-
-- 【Lab Results】
-- 【細菌培養結果及敏感性結果】
-- 【分生微生物】
-- 【輸血前檢驗】
-- 【血液檢驗】
-- 【生化檢驗】
-- 【尿液檢驗】
-- 【ABG-檢驗】
-- 【血液氣體】
-- 病毒學檢驗
-- 腫瘤標記
-- 基因檢驗
-- 染色體檢驗
-- 流式細胞分析
-- 骨髓細胞分類
-- 特殊免疫學檢驗
-- 培養與藥敏
-- PCR 或分子微生物檢驗
+上述內容必須依本 prompt 規則放入既定 section。
 
 ---
 
-## 2. 放入 [exam finding]
+# 四、整體分類觀念
 
-原始標題或內容包括：
+這份標準化病歷分成兩種資料：
 
-- 【檢查紀錄】
-- 【放射報告】
-- 【核醫報告】
-- 【內視鏡報告】
-- X-ray
-- CXR
-- KUB
-- CT
-- CTA
-- MRI
-- PET
-- PET/CT
-- Tc-99m MDP
-- Bone scan
-- Sonography
-- Ultrasonography
-- Echocardiography
-- ECG
-- Lung Function Test
-- Pathology
-- Biopsy
-- Bone marrow biopsy
-- Endoscopy
-- Colonoscopy
-- Sigmoidoscopy
-- Panendoscopy
-- Hearing test
-- ABR
-- 其他診斷性檢查
+## A. Snapshot-oriented data
 
-病理與骨髓病理也放在 [exam finding]，不要放在 [lab data]。
+描述資料產生當下病人的目前狀態：
 
----
+* [allergy]
+* [vital signs]
+* [active medication]
+* [valid medication]
 
-## 3. 放入 [MedRec]
+## B. Longitudinal data
 
-原始標題或內容包括：
+描述病人歷史上發生過的醫療事件：
 
-- 【處方紀錄】
-- 【門診現在用藥紀錄】
-- 【門急診紀錄】
-- 【出院帶藥紀錄】
-- SOAP
-- POMR
-- 急診紀錄
-- 門診紀錄
-- 入院摘要
-- 出院摘要
-- Present Illness
-- Chief Complaint
-- Past History
-- Brief Summary
-- Hospital Course
-- Discharge Diagnosis
-- Diagnosis
-- Prescription
-- Discharge Medication
-- Allergy
-- Subjective
-- Objective
-- Assessment
-- Plan
+* [lab data]
+* [exam finding]
+* [MedRec]
+* [consultation]
+* [surgical operation]
+* [radiotherapy]
+* [chemotherapy]
+* [immunochemotherapy]
 
-目前處方、門診用藥及出院帶藥原則上整理在相對應的 SOAP、POMR 或住院紀錄中。
+不得因同一醫療事件同時具有 snapshot 與 longitudinal 意義，就錯誤刪除必要資料。
 
-### 【出院帶藥紀錄】配置規則
+例如某藥物目前仍為住院 active medication：
 
-若原始資料存在【出院帶藥紀錄】，必須先依每筆藥物的「起始日期」分組。
+* 可出現在 `[active medication]` 作為目前用藥 snapshot。
+* 若它同時屬於某次化療療程，完整療程仍可出現在 `[chemotherapy]`。
 
-【出院帶藥紀錄】中的藥物起始日期視為該次住院的「出院日期」，並用來配置到對應的住院紀錄：
-
-- 將相同起始日期的出院帶藥視為同一次出院的藥物群組。
-- 以該起始日期作為出院日期，尋找同一病人中對應的住院摘要、出院摘要、POMR、住院病史或 Hospital Course。
-- 若某一住院紀錄的結束日期與出院帶藥起始日期相同，必須將該日期的全部出院帶藥放入該住院紀錄的 `- Discharge Medication` 下。
-- 若原始住院摘要未明列出院日期，但可由【出院帶藥紀錄】的起始日期明確對應到該次住院，則該起始日期可作為該次 POMR 的住院結束日期。
-- 同一份【出院帶藥紀錄】若包含多個不同起始日期，必須拆成多組，分別配置到各自對應的住院紀錄，不可全部放入最近一次住院。
-- 已能配置到住院紀錄的出院帶藥，不得另外建立 `Medication Record`，也不得重複出現在其他住院紀錄。
-- 只有在整份資料中確實找不到可對應的住院紀錄時，才可將該組藥物保留為獨立 `Medication Record`。
-- 配置時只使用來源明確提供的藥名、劑量、頻次、途徑、天數與備註；不得因配對住院而自行補充缺失欄位。
-
-若只有藥品清單而沒有對應門診或住院紀錄，可建立：
-
-YYYY-MM-DD Medication Record
-
-- Prescription
-  - ...
-
-日期使用處方起始日或明確記載的處方日期。
-
-若沒有可確認日期，使用：
-
-Medication Record
-
-不可自行創造日期。
+但不可無意義地重複貼上完全相同的大段文字。
 
 ---
 
-## 4. 放入 [consultation]
+# 五、[allergy]
 
-原始標題或內容包括：
+只有來源存在明確 allergy 資料時才建立。
 
-- 【會診紀錄】
-- [ConSult Text]
-- [REPLY_TEXT]
-- Consultation
-- Consult
-- 照會
-- 會診申請
-- 會診回覆
+來源可能包括：
 
----
+* Allergy
+* Drug allergy
+* NKDA
+* No known drug allergy
+* 健保 IC 卡過敏紀錄
+* 重要病史過敏紀錄
+* 明確藥物不良反應被記載為 allergy
 
-## 5. 放入 [surgical operation]
+格式：
 
-原始標題或內容包括：
+[allergy]
 
-- 【手術紀錄】
-- 【Surgical Operation】
-- Operation
-- Surgery
-- 手術報告
-- Port-A insertion
-- Port-A removal
-- Permcath insertion
-- Permcath removal
-- Mastectomy
-- Hemorrhoidectomy
-- Prostate surgery
-- Tumor biopsy performed as an operation
-- 具有正式手術紀錄的介入性處置
+* No known drug allergy
 
-若只是影像報告提到「status post Port-A」，仍放在 [exam finding]，不可因此另外建立手術紀錄。
+或：
 
----
+[allergy]
 
-## 6. 放入 [radiotherapy]
+* Targocid (teicoplanin)
 
-原始內容包括：
+  * Reaction
 
-- Radiotherapy
-- Radiation therapy
-- RT
-- 放射治療
-- 照射劑量
-- 分次治療
-- CT simulation
-- Radiation treatment course
+    * Dyspnea
+    * Throat tightness
+    * Facial numbness
 
-只有治療計畫但尚未開始時，必須明確保留 `planned`。
+若同一 allergy 在不同位置重複記載，只保留一次。
+
+若資料互相矛盾，不自行判斷哪一筆正確，可寫：
+
+* Allergy record
+
+  * Source 1: No known drug allergy
+  * Source 2: Penicillin allergy reported
+  * [source data inconsistent]
+
+一般藥物副作用不可自動提升成 allergy，除非原始資料明確如此記載。
 
 ---
 
-## 7. 放入 [chemotherapy]
+# 六、[vital signs]
 
-原始內容包括：
+將：
 
-- 【化學治療紀錄】
-- Chemotherapy
-- 化療處方簽
-- 抗癌藥物給藥紀錄
-- 標靶治療
-- 單株抗體治療
-- 免疫治療
-- 化療前處置
-- 化療支持性輸液
+* 【生命徵象】
+* 【生命徵象--血糖】
 
-若來源特別將免疫治療或免疫化學治療分開，可使用：
+整理至此。
 
-[immunochemotherapy]
+可包含：
 
-否則統一放在：
+* Temperature
+* Pulse
+* Respiratory rate
+* Blood pressure
+* SpO2
+* Body weight
+* Height
+* Bowel movement
+* Blood sugar
 
-[chemotherapy]
+依日期時間由新到舊排列。
 
----
+格式範例：
 
-# 四、先確認單一病人資料的完整性
+[vital signs]
 
-請先按照以下流程處理：
+2026-09-11 12:30
 
-## 步驟 1
+* T: 36.1°C
+* P: 98/min
+* R: 18/min
+* BP: 148/65 mmHg
+* SpO2: 100%
 
-將本次輸入的全部內容視為同一位病人的原始病歷資料。
+2026-09-11 12:55
 
-不要進行病人文件切割；整份輸入保持為一個處理單位。
+* Blood sugar: 137 mg/dL
 
-## 步驟 2
+同一時間點的 TPR/BP/SpO2 應合併。
 
-完整閱讀原始資料直到真正結尾。
+血糖若時間不同，分開列。
 
-不可因看到「出院帶藥紀錄」、某一段 POMR、某一份影像、病理或檢驗結果就提前停止。
-
-## 步驟 3
-
-使用下列資訊確認整份資料在臨床脈絡上是否仍屬於同一位病人：
-
-- 性別
-- 年齡
-- 疾病
-- 體重
-- 身高
-- 門診科別
-- 住院病史
-- 治療方案
-
-若來源內部出現看似矛盾的病人特徵，不可自行拆成另一位病人，也不可自行推測；依「不確定資料的處理方式」保留可確認內容。
-
-## 步驟 4
-
-完成整份資料的分類、去重、日期標準化、層級重建與格式整理後，再一次輸出完整結果。
-
-輸出前後不要加入額外的病人分隔符號。
+不要把歷史上所有體重、身高變化都塞入此區；只有資料產生當時或近期明確記載者可保留。
 
 ---
 
-# 五、必須移除的系統雜訊
+# 七、[active medication]
 
-以下內容通常不需要輸出：
+此區只放：
 
-- 藥師評估報告產出時間
-- 大量分隔線，例如：
-  ------------------------------------------
-- 病歷號
-- 身分證號
-- 姓名
-- 生日
-- 床號
-- 就醫序號
-- 申請單號
-- 病理序號
-- 醫師證書字號
-- 報告醫師證號
-- Technician
-- Doctor1
-- Doctor2
-- 醫院行政代碼
-- 「心導管室護理紀錄不予點選帶入」
-- 「不予點選帶入」
-- 只有標題但沒有結果的區段
-- 沒有臨床內容的空白欄位
-- 固定制式影像免責文字
-- 胸部 X 光固定偽陰性率說明
-- 影像對小病灶偵測限制的制式長段落
-- 完全沒有病人特異性的系統說明
-- 重複的檢查名稱
-- 多餘空白行
-- 多餘星號或院內系統標記
+「資料產生當時，本次住院中仍正在使用的住院 medication orders」。
 
-例如下列符號通常移除：
+主要來源：
 
-★
-(管1)
-(管4)
-(袋)
-感恩您
-Dear doctor
-Thanks for consultation
-Thank you, sincerely
+【處方紀錄】
 
-但 `[自備藥]` 具有來源意義，可以保留為備註：
+判斷方式：
 
-self-supplied
+1. 使用「藥師評估報告產出時間」作為 reference time。
+2. 起始時間已到，且結束時間尚未到者，視為 active。
+3. 起始時間晚於 reference time 的未來醫囑，不列。
+4. 結束時間早於 reference time 的已停用醫囑，不列。
+5. PRN medication 只要醫囑仍有效，可列。
+6. `[自備藥]` 若住院期間仍 active，可列並標示 `(self-supplied)`。
+7. 同藥不同劑量、頻率、途徑或不同醫囑階段不得錯誤合併。
+8. 已結束的 ST dose 不列為目前 active medication。
+9. 出院帶藥不放在此區。
+10. 門診長期處方不放在此區，而放 `[valid medication]`。
 
----
+可包含：
 
-# 六、病患基本資料的處理方式
+* 固定住院藥物
+* PRN medication
+* 抗生素
+* 支持性藥物
+* 電解質補充
+* IV fluid
+* TPN / nutritional support
+* inhaled medication
+* topical medication
+* self-supplied inpatient medication
 
-原始文件通常包含：
+若 antineoplastic medication 在 reference time 確實仍為 active inpatient order，可以保留；完整療程仍另外整理至 `[chemotherapy]`。
 
-【病患基本資料】
-性別
-年齡
-體重
-身高
+格式：
 
-此區段主要用於確認文件歸屬。
+[active medication]
 
-不要建立新的 `[patient information]` 區段。
+* Cefim (cefepime 1g; vial) 2000mg Q12H IVD
 
-可在下列情況保留年齡與性別：
+  * 2026-09-07 08:00 ~ 2026-09-14 07:59
+* Menocik (minocycline 100mg; vial) 100mg Q12H IVD
 
-- SOAP 或 POMR 的病史原文中已提到。
-- 會診內容需要病人背景。
-- 年齡或性別與臨床判讀直接相關。
+  * 2026-09-09 06:00 ~ 2026-09-16 06:00
+* NovoRapid (insulin aspart 100U/mL; prefilled pen) 22U TIDAC SC
 
-體重與身高只有在以下情況保留：
-
-- 化療劑量計算需要。
-- 文件原本在 SOAP 或 POMR 中明確使用。
-- 臨床治療判斷需要。
-
-否則可省略獨立的基本資料區。
+若起訖時間不是臨床理解所必要，可省略，但不得因此造成目前使用狀態不清。
 
 ---
 
-# 七、日期標準化規則
+# 八、[valid medication]
 
-所有日期統一使用 ISO 8601：
+此區只放：
 
-YYYY-MM-DD
+「門診開立，而且在資料產生當時仍屬有效／current 的門診用藥」。
+
+主要來源：
+
+【門診現在用藥紀錄】
+
+此區不是完整的 outpatient prescription history。
+
+不得把所有過去 SOAP 的處方都自動放入此區。
+
+判斷原則：
+
+1. 原始區段若明確稱為【門診現在用藥紀錄】，可視為資料抽取當時的 current outpatient medication list。
+2. 若另有明確結束日期早於 reference time，則不列。
+3. 若處方起始日期晚於 reference time，則不列。
+4. 若只有過去某次 SOAP 的 Prescription，但沒有證據顯示仍有效，不得自行提升至 `[valid medication]`。
+5. 出院帶藥不等於現在門診有效藥物，不可自動放進來。
+6. 若門診現在用藥與住院 active medication 重複，兩區仍可各自保留，因為來源與 clinical context 不同。
+7. `[自備藥]` 可標示 `(self-supplied)`。
+
+格式：
+
+[valid medication]
+
+* Vemlidy (tenofovir alafenamide 25mg; tab) 1# QD PO
+* Norvasc (amlodipine 5mg; tab) 1# QD PO
+* Toujeo (insulin glargine 300U/mL; prefilled pen) 30U HS SC
+
+若來源沒有 route，不得自行補 route。
+
+---
+
+# 九、[lab data]
+
+放入：
+
+* 【Lab Results】
+* 【細菌培養結果及敏感性結果】
+* 【分生微生物】
+* 【輸血前檢驗】
+* 【血液檢驗】
+* 【生化檢驗】
+* 【尿液檢驗】
+* 【糞便檢驗】
+* 【體液檢驗】
+* 【ABG-檢驗】
+* 【ABG-病房】
+* 血液氣體
+* 腫瘤標記
+* 病毒學檢驗
+* 特殊免疫學檢驗
+* 基因檢驗
+* 染色體檢驗
+* Flow cytometry
+* PCR
+* Blood culture
+* Urine culture
+* Sputum culture
+* Wound culture
+* Gram stain
+* AFB stain
+* TB culture
+* culture susceptibility
+* 其他 laboratory-based testing
+
+病理與正式 bone marrow pathology 放 `[exam finding]`，不要放 `[lab data]`。
+
+## 一般檢驗
+
+格式：
+
+2026-09-10    WBC                           7.41                ×10^3/μL
+2026-09-10    HGB                           11.4                g/dL
+2026-09-10    PLT                           62                  ×10^3/μL
+
+移除沒有真正結果的群組名稱，例如：
+
+全套血液檢查(CBC) %
+白血球分類計數(WBC DC) %
+凝血脢原時間(PT)
+
+但保留其後真正結果。
+
+## Culture
+
+格式：
+
+2026-09-08 Sputum culture
+
+* Specimen
+
+  * Spontaneously expectorated sputum
+* Organism
+
+  * PDR-Pseudomonas aeruginosa
+  * Growth: 3+
+* Susceptibility
+
+  * Intermediate
+
+    * Cefepime: MIC 16
+    * Colistin: MIC 1
+  * Resistant
+
+    * Piperacillin/tazobactam: MIC ≥128
+    * Ceftazidime: MIC 32
+    * Meropenem: MIC ≥16
+    * Levofloxacin: MIC ≥8
+
+陰性 culture：
+
+2026-07-14 Blood culture
+
+* Specimen
+
+  * Peripheral blood
+* Result
+
+  * No growth after 5 days of aerobic and anaerobic incubation
+
+---
+
+# 十、[exam finding]
+
+放入所有 diagnostic examination，包括：
+
+* CXR
+* X-ray
+* KUB
+* CT
+* CTA
+* MRI
+* PET
+* PET/CT
+* Bone scan
+* nuclear medicine
+* sonography
+* ultrasonography
+* echocardiography
+* ECG
+* Lung Function Test
+* pathology
+* biopsy
+* bone marrow biopsy
+* endoscopy
+* colonoscopy
+* EGD
+* sigmoidoscopy
+* panendoscopy
+* hearing test
+* ABR
+* 其他診斷性檢查
+
+正式 pathology 放這裡。
+
+同一檢查若在多處重複：
+
+* 優先保留完整正式報告。
+* SOAP/POMR 裡的摘要只保留其臨床意義，不再重複整份正式報告。
+
+依日期由新到舊排列。
+
+格式依原 prompt 原則處理，例如：
+
+2026-07-15 MRI - brain
+
+* Clinical indication
+
+  * ...
+* Findings
+
+  * ...
+* Impression
+
+  * ...
+
+來源沒有的子標題不得自行增加。
+
+---
+
+# 十一、[MedRec] 的核心定義
+
+`[MedRec]` 是 encounter-centered longitudinal record。
+
+下列全部放進 `[MedRec]`：
+
+* 門診
+* 急診
+* 住院
+* 已出院 hospitalization
+* 目前仍住院 hospitalization
+* SOAP
+* Admission Note
+* Progress Note
+* Weekly Summary
+* POMR
+* discharge summary
+* multidisciplinary clinical notes such as SDM / MultiTeam，若不是正式 consultation
+* 其他具有 encounter 性質的 clinical note
+
+不得把 `[active medication]` 或 `[valid medication]` 整批再次搬進 `[MedRec]`。
+
+但若某次 SOAP/POMR 原本有 Prescription / Discharge Medication，仍保留在該 encounter 中。
+
+---
+
+# 十二、[MedRec] 的排序
+
+所有 MedRec records 原則上依：
+
+「紀錄日期或 episode 結束日期，由新到舊」
+
+排列。
 
 例如：
 
-2026-07-20
+[MedRec]
 
-## 1. 日期範圍
+2026-09-11 Progress Note ...
 
-使用：
+2026-09-10 Progress Note ...
 
-2026-06-26 ~ 2026-07-10
+2026-09-08 Weekly Summary ...
 
-## 2. 多個相同結果日期
+2026-09-02 Admission Note ...
 
-使用：
+2026-08-20 SOAP ...
 
-2026-07-20, 2026-06-24, 2026-04-24 CXR
+2026-07-01 ~ 2026-07-08 POMR ...
 
-## 3. 民國日期
+若同一天有多筆 note：
 
-民國年轉換為西元年：
+* 有明確時間者依時間排序。
+* 無時間者保留來源合理順序。
+* 不可自行猜時間。
 
-民國年 + 1911 = 西元年
+---
+
+# 十三、門診紀錄
+
+原始來源：
+
+【門急診紀錄】
+
+若為門診，整理為：
+
+YYYY-MM-DD SOAP Department Physician
+
+* S
+
+  * ...
+* O
+
+  * ...
+* A/P
+
+  * ...
+
+若來源明確有處方：
+
+* Prescription
+
+  * ...
+
+不是每次門診都有處方。
+
+不得因 `[valid medication]` 有藥物，就把那些藥物強行配到最近一次 SOAP。
+
+門診長時間軸若在同一 Subject/Object 中黏著多個日期，必須依日期拆開成子時間軸，不可全部誤認為最外層門診日期當天發生。
+
+---
+
+# 十四、急診紀錄
+
+若原始【門急診紀錄】屬於急診，整理為：
+
+YYYY-MM-DD ED Emergency Medicine Physician
+
+* Chief Complaint
+
+  * ...
+* History
+
+  * ...
+* Objective
+
+  * ...
+* Assessment
+
+  * ...
+* Plan
+
+  * ...
+
+若原始資料只提供 Subject/Object/Plan，也可以：
+
+* S
+* O
+* A/P
+
+不得自行補寫不存在的欄位。
+
+若急診紀錄後續導致住院，急診紀錄仍可保留為獨立 encounter，不必完全吸收到 Admission Note。
+
+---
+
+# 十五、辨識 hospitalization episode
+
+同一檔案可能包含多次不同住院。
+
+必須先依：
+
+* Admission date
+* Discharge date
+* Chief Complaint
+* Present Illness
+* Hospital Course
+* Discharge Diagnosis
+* POMR
+* 出院帶藥起始日期
+* Admission Note
+* Progress Note
+* Weekly Summary
+* 治療時間軸
+
+辨識每一個 hospitalization episode。
+
+不同住院 episode 不可混合。
+
+尤其不可：
+
+* 把前一次出院帶藥放入後一次 hospitalization。
+* 把前一次 Hospital Course 合併進目前住院。
+* 把不同 chemotherapy admission 當成同一次住院。
+
+---
+
+# 十六、已離院 hospitalization
+
+當來源存在明確 discharge evidence，例如：
+
+* Discharge Diagnosis
+* Hospital Course 明確記載 discharged
+* POMR / discharge summary
+* 出院日期
+* 出院帶藥
+* 明確 episode 起訖日期
+
+則整理為：
+
+YYYY-MM-DD ~ YYYY-MM-DD POMR Department Physician
+
+* Discharge Diagnosis
+
+  * ...
+* Chief Complaint
+
+  * ...
+* History of Present Illness
+
+  * ...
+* Hospital Course
+
+  * ...
+* Discharge Medication
+
+  * ...
+
+可依來源改用：
+
+* History
+
+但同一文件內盡量一致。
+
+如果某欄位原始資料不存在，就省略，不建立空白欄位。
+
+---
+
+# 十七、出院帶藥配置規則
+
+【出院帶藥紀錄】不得獨立全部塞入 `[valid medication]`。
+
+必須先依「起始日期」分組。
+
+規則：
+
+1. 相同起始日期的出院藥視為同一次 discharge medication group。
+2. 該日期通常可作為出院日期的重要配對線索。
+3. 尋找對應 hospitalization episode。
+4. 若 episode 結束日期與藥物起始日期一致，將該組藥放入該 POMR 的：
+
+   * Discharge Medication
+5. 若住院摘要沒有明列出院日期，但其他資訊能明確證實該藥群屬於該次出院，可以用該日期補足 episode 結束日期。
+6. 不同起始日期的藥物不得混在同一次 discharge。
+7. 已配置到 POMR 的出院帶藥，不另建立 Medication Record。
+8. 若整份資料確實找不到對應 hospitalization，才可建立：
+
+YYYY-MM-DD Medication Record
+
+* Prescription
+
+  * ...
+
+不可因距離最近就硬配。
+
+---
+
+# 十八、目前仍在院中的 hospitalization
+
+若資料顯示病人目前尚未出院，不得人工製造 POMR 或 discharge summary。
+
+應依實際 note type 分開整理。
+
+可能包括：
+
+* Admission Note
+* Progress Note
+* Weekly Summary
+
+並全部放在 `[MedRec]`。
+
+---
+
+# 十九、Admission Note
+
+辨識線索通常包括：
+
+* 新一次 hospitalization 的最初紀錄
+* Chief Complaint
+* Present Illness
+* Past History
+* Allergy
+* initial Diagnosis
+* initial Problem List
+* initial Assessment / Plan
+* admission reason
+
+格式：
+
+YYYY-MM-DD Admission Note Department Physician
+
+* Chief Complaint
+
+  * ...
+* History of Present Illness
+
+  * ...
+* Past History
+
+  * ...
+* Assessment
+
+  * ...
+* Plan
+
+  * ...
+
+若原始 note 使用 S/O/A/P，也可忠實使用。
+
+不得將過去 hospitalization 的 discharge summary 誤當成目前 Admission Note。
+
+---
+
+# 二十、Progress Note
+
+目前 hospitalization 內逐日病程通常具有：
+
+* Subjective
+* Objective
+* Problem List
+* Assessment
+* Plan
+* 主治醫師迴診紀錄與評論
+
+應整理為：
+
+YYYY-MM-DD Progress Note Department Physician
+
+* S
+
+  * ...
+* O
+
+  * ...
+* A
+
+  * ...
+* P
+
+  * ...
+
+或：
+
+* Subjective
+* Objective
+* Assessment
+* Plan
+
+同一份輸出內盡量一致。
+
+不同日期的 Progress Note 不可全部合併成一筆。
+
+不得因多天內容相似就刪除時間變化。
+
+---
+
+# 二十一、Weekly Summary
+
+辨識線索：
+
+* Weekly Summary
+* Brief Summary
+* 明確描述「this week」
+* 橫跨多日的病程摘要
+* 一週治療進度
+* 本週重要檢查及治療結果
+* 下一階段計畫
+
+格式：
+
+YYYY-MM-DD Weekly Summary Department Physician
+
+* Problem List
+
+  * ...
+* Clinical Course
+
+  * ...
+* Important Findings
+
+  * ...
+* Treatment
+
+  * ...
+* Plan
+
+  * ...
+
+若來源沒有上述某個欄位，不自行增加。
+
+若來源只是單日 progress note，不得因文字較長就自行改成 Weekly Summary。
+
+---
+
+# 二十二、POMR、Admission Note、Progress Note、Weekly Summary 的關係
+
+已完成 hospitalization：
+
+優先整理為一筆完整 POMR。
+
+例如：
+
+2026-05-08 ~ 2026-06-03 POMR Hemato-Oncology Xia HeXiong
+
+* Discharge Diagnosis
+* Chief Complaint
+* History of Present Illness
+* Hospital Course
+* Discharge Medication
+
+目前 hospitalization：
+
+保留：
+
+Admission Note
+Progress Note
+Weekly Summary
+Progress Note
+Progress Note
+...
+
+不要因病人仍住院就自行產生 POMR。
+
+若資料中同時有正式 discharge POMR 與先前逐日 Progress Notes：
+
+* 正式 POMR 保留完整 hospitalization summary。
+* Progress Notes 若具有額外重要臨床時間變化，可保留。
+* 若完全只是 POMR 已完整涵蓋的重複內容，可適度去重。
+* 不得刪掉具有重要病程演變的 Progress Notes。
+
+---
+
+# 二十三、其他 MedRec note type
+
+例如：
+
+* SDM
+* Shared Decision-Making
+* MultiTeam
+* Psycho-oncology team note
+* Palliative shared-care note
+
+若它們是 longitudinal clinical record，但不是「一科正式照會另一科」的 consultation，可留在 `[MedRec]`：
+
+YYYY-MM-DD SDM - Shared Decision-Making
+
+* ...
+
+若有正式：
+
+ConSult Text
+REPLY_TEXT
+
+則放 `[consultation]`。
+
+---
+
+# 二十四、[consultation]
+
+來源：
+
+* 【會診紀錄】
+* ConSult Text
+* REPLY_TEXT
+* Consultation
+* Consult
+* 照會
+* 會診申請
+* 會診回覆
+
+格式：
+
+YYYY-MM-DD Consulting Specialty
+
+* Brief History and Clinical Findings
+
+  * Consultation purpose
+
+    * ...
+  * Patient background
+
+    * ...
+  * Relevant findings
+
+    * ...
+* Consultation Findings and Recommendations
+
+  * Findings
+
+    * ...
+  * Impression
+
+    * ...
+  * Recommendations
+
+    * ...
+
+ConSult Text → Brief History and Clinical Findings
+
+REPLY_TEXT → Consultation Findings and Recommendations
+
+會診內若大段複製 Admission Note，只保留與會診問題相關的背景，但不得刪除會診判斷所需的重要資訊。
+
+---
+
+# 二十五、[surgical operation]
+
+來源：
+
+* 【手術紀錄】
+* 【Surgical Operation】
+* Operation
+* Surgery
+* 正式介入性手術紀錄
+* Port-A insertion/removal
+* Permcath insertion/removal
+* tumor excision
+* biopsy performed as an operation
+
+單純影像寫：
+
+status post Port-A
+
+不能據此自行建立手術紀錄。
+
+格式：
+
+YYYY-MM-DD
+
+* Surgery
+
+  * ...
+* Finding
+
+  * ...
+* Procedure
+
+  * ...
+* Specimen
+
+  * ...
+* Estimated blood loss
+
+  * ...
+* Complication
+
+  * ...
+
+來源沒有的項目不要增加。
+
+所有手術集中在一個 `[surgical operation]`。
+
+---
+
+# 二十六、[radiotherapy]
+
+整理：
+
+* 已實際完成或正在執行的放療。
+* 明確標示 planned 的治療計畫。
+
+格式：
+
+* 2026-06-22 ~ 2026-06-29 - 1800cGy/6 fractions (6MV photon) to T6
+
+若只有計畫：
+
+* 2026-06-22 - Planned CT simulation
+* Planned radiotherapy: 5000cGy/25 fractions to the right buccal tumor bed and bilateral neck
+
+不可把 planned treatment 寫成 completed treatment。
+
+---
+
+# 二十七、[chemotherapy]
+
+來源包括：
+
+* 【化學治療紀錄】
+* chemotherapy administration
+* chemotherapy regimen
+* targeted therapy
+* monoclonal antibody
+* immune checkpoint inhibitor
+* chemotherapy premedication
+* antineoplastic infusion
+
+若來源本身明確把 immunochemotherapy 獨立分類，可使用：
+
+[immunochemotherapy]
+
+否則統一放 `[chemotherapy]`。
+
+每次療程格式：
+
+* YYYY-MM-DD - main antineoplastic treatment
+
+  * premedication / supportive treatment
+
+例如：
+
+* 2026-07-17 - Vidaza (azacitidine) 75mg/m2 120mg NS 100mL 15min D1-7
+
+  * dexamethasone 4mg + diphenhydramine 30mg + NS 250mL
+
+保留：
+
+* calculated dose
+* actual dose
+* diluent
+* volume
+* infusion duration
+* treatment day
+* regimen
+
+化療前處置放下一層，不當成主抗癌藥。
+
+只有化療處方簽而沒有實際給藥證據時：
+
+* 2026-07-17 - Azacitidine regimen ordered: 75mg/m2 D1-7
+
+不可寫 received / administered / completed。
+
+---
+
+# 二十八、藥品統一格式
+
+優先使用：
+
+Brand (generic strength; dosage form) dose frequency route duration/period remark
+
+generic name 一律小寫。
+
+例如：
+
+Vemlidy (tenofovir alafenamide 25mg; tab) 1# QD PO
+
+Tramacet (tramadol 37.5mg, acetaminophen 325mg; tab) 1# Q6H PO 7D
+
+注射藥保留實際劑量：
+
+Menocik (minocycline 100mg; vial) 100mg Q12H IVD
+
+外用：
+
+Zalain (sertaconazole nitrate 2%; cream, 15g/tube) QS BID TOPI
+
+自備藥：
+
+Lenvima (lenvatinib 10mg; cap) 1# QD PO (self-supplied)
+
+來源沒有：
+
+* brand
+* dosage form
+* route
+* duration
+
+就不要自行補上。
+
+固體口服藥：
+
+1tab / 1cap → 1#
+
+但不要把注射劑量寫成 `1#`。
+
+---
+
+# 二十九、同藥不同醫囑不可錯誤合併
+
+只有以下全部相同時才可視為完全重複：
+
+* 藥名
+* 規格
+* 每次劑量
+* route
+* frequency
+* start date
+* end date
+* source context
+
+不可合併：
+
+* ST 與 QD
+* loading 與 maintenance
+* PRN 與 scheduled
+* inpatient 與 outpatient
+* inpatient 與 discharge
+* self-supplied 與 hospital-supplied
+* 不同起訖日期
+* 不同 dose
+* 不同 route
+* 不同 frequency
+
+---
+
+# 三十、日期規則
+
+所有日期轉為 ISO 8601：
+
+YYYY-MM-DD
+
+日期範圍：
+
+YYYY-MM-DD ~ YYYY-MM-DD
+
+日期時間：
+
+YYYY-MM-DD HH:MM
+
+民國年：
+
+民國年 + 1911
 
 例如：
 
 115/07/20 → 2026-07-20
-114/04/13 → 2025-04-13
 
-## 4. 連續數字日期
-
-例如：
+連續數字：
 
 20260720 → 2026-07-20
 
-## 5. 只有月日
+只有月日：
 
-例如：
+只有在外層年份明確時才補全年份。
 
-07/18
+無法確認年份不得猜測。
 
-只能在外層療程、處方或紀錄已明確提供年份時補成年份。
-
-例如外層為：
-
-2026-07-17 化療處方
-
-則：
-
-07/18 → 2026-07-18
-
-若年份無法確認，不可自行猜測。
-
-## 6. 排序
-
-每個區段內依日期由新到舊排列。
-
-長篇病史中提到的歷史日期，放在該病史的時間軸中，不要錯誤地全部歸到最外層紀錄日期。
+各 root section 原則上由新到舊排列。
 
 ---
 
-# 八、Markdown 格式規則
+# 三十一、[lab data] 與 [exam finding] 的重複處理
 
-只使用純文字 Markdown。
+同一結果可能同時出現在：
 
-## 1. 項目符號
+* 正式報告
+* SOAP Object
+* Admission Note
+* Progress Note
+* POMR
+* Consultation
 
-只使用半形減號：
+原則：
 
-- 第一層
-  - 第二層
-    - 第三層
-      - 第四層
-
-每深入一層，使用兩個半形空白。
-
-所有項目符號在原始純文字中都必須明確寫成半形減號加一個半形空白：`- `。
-
-不得使用星號項目符號 `* `，也不得依賴 Markdown 渲染後的視覺效果判斷項目符號。
-
-不要使用：
-
-*
-+
-•
-全形破折號
-
-## 2. 日期標題
-
-一般紀錄的日期標題不加項目符號：
-
-2026-07-15 MRI - brain
-
-- Findings
-  - ...
-
-## 3. 治療紀錄
-
-化療及放射治療日期要加項目符號：
-
-- 2026-07-17 - Drug ...
-
-## 4. 不使用粗體
-
-不要使用：
-
-**
-__
-
-## 5. 不使用表格
-
-不要建立 Markdown 表格。
-
-## 6. 空行
-
-不同日期的紀錄之間留一個空白段落。
-
-區段標題前後保留空行。
-
-同一個階層式項目清單內不得插入空白行。
-
-父層項目與其直接子層項目之間不得有空白行；子層項目結束後，回到上一層或接續同層項目時，也不得插入空白行。
-
-正確格式：
-
-- Clinical history
-  - Progressive left shoulder pain
-- Findings
-  - C6-T2 vertebral body lesions
-  - Spinal compression
-- Impression
-  - Bone metastasis
-
-錯誤格式：
-
-- Clinical history
-
-  - Progressive left shoulder pain
-- Findings
-
-  - C6-T2 vertebral body lesions
-
-只有在完整結束一筆日期紀錄、切換至下一筆日期紀錄，或切換區段時，才可保留空白行。
-
-## 7. Code box
-
-最終回答必須完整置於單一 fenced code block 中。
-
-code box 外不得輸出任何文字。
-
-code box 內必須保留原始純文字的 `- ` 項目符號與空白縮排，不得讓 Markdown 渲染改變可複製的文字。
+1. 正式檢驗結果 → `[lab data]`
+2. 正式 diagnostic report → `[exam finding]`
+3. MedRec 中只保留其 clinical meaning 或重要變化
+4. 不必把整份正式報告重貼進 MedRec
+5. 若不同日期有變化，不可誤判成重複而刪除
 
 ---
 
-# 九、[lab data] 的整理方式
+# 三十二、病患基本資料
 
-## 1. 一般檢驗格式
+原始：
 
-整理成：
+【病患基本資料】
 
-日期    檢驗項目    結果    單位
+主要用於確認資料屬於同一病人。
 
-例如：
+不要建立 `[patient information]`。
 
-2026-07-17    WBC                           1.09                ×10^3/μL
-2026-07-17    HGB                           10.6                g/dL
-2026-07-17    PLT                           78                  ×10^3/μL
-2026-07-17    Creatinine                    0.54                mg/dL
+性別、年齡可在：
 
-盡量保持欄位整齊，但不需使用表格。
+* Admission Note
+* POMR
+* Consultation
 
-## 2. 移除假結果項目
+來源原本提到時保留。
 
-以下通常只是檢驗群組名稱，不是真正結果：
+體重、身高若與：
 
-全套血液檢查(CBC) %
-全套血液學檢查(CBC),急作 %
-白血球分類計數(WBC DC) %
-尿一般檢查General urine examination /HPF
-凝血脢原時間(PT)
-Protein EP
-Free Light Chain κ/λ
+* chemotherapy dose
+* treatment decision
+* nutrition
+* clinical assessment
 
-若該行只有檢驗群組名稱、沒有實際結果，刪除該行。
+相關，可在適當位置保留。
 
-但其後真正的 WBC、HGB、PLT、PT、INR 等結果必須保留。
-
-## 3. 缺少結果
-
-若只有項目名稱或單位，沒有結果，通常省略。
-
-若內容為 `see attachment`，且後方有完整附件內容，使用附件內容。
-
-若沒有附件內容，可保留：
-
-2026-03-31    BM chromosome analysis        See attachment
-
-不可自行補寫結果。
-
-## 4. 特殊檢驗
-
-骨髓細胞分類、染色體、分子基因及流式細胞分析，整理為階層式報告：
-
-2026-06-23 BM Chromosome Analysis - Cytogenetics Report
-
-- Indication
-  - ...
-- Specimen
-  - ...
-- Method
-  - ...
-- Results
-  - ...
-- Interpretation
-  - ...
-- Note
-  - ...
-
-## 5. 培養與藥敏
-
-格式：
-
-2026-05-05 Blood culture
-
-- Specimen
-  - Peripheral blood
-- Organism
-  - CR-Acinetobacter seifertii
-- Susceptibility
-  - Susceptible
-    - Amikacin
-    - Gentamicin
-  - Resistant
-    - Ciprofloxacin
-    - Levofloxacin
-    - Piperacillin/tazobactam
-    - Imipenem
-    - Cefepime
-
-若結果為陰性：
-
-2026-05-13 Blood culture
-
-- Specimen
-  - Peripheral blood
-- Result
-  - No growth after 5 days of aerobic and anaerobic incubation
-
-## 6. 分子微生物
-
-不要逐字保留破碎表格。
-
-依病原體與結果重新整理：
-
-2026-07-16 Molecular microbiology panel
-
-- Not detected
-  - Acinetobacter baumannii
-  - Adenovirus
-  - Chlamydia pneumoniae
-  - Coronavirus
-  - ...
-- Not applicable
-  - CTX-M
-
-不可因欄位排列混亂而把結果配錯病原體。
-
-若無法確定欄位對應，保留原始可確認部分並標示：
-
-- Result
-  - Source table alignment unclear
-
-不要猜測。
+不要額外建立基本資料 section。
 
 ---
 
-# 十、[exam finding] 的整理方式
+# 三十三、移除系統雜訊
 
-## 1. 標題格式
+通常移除：
 
-使用：
+* 病歷號
+* 就醫序號
+* 姓名
+* 身分證號
+* 生日
+* 床號
+* 申請單號
+* 病理序號
+* 報告醫師證號
+* Technician
+* Doctor1
+* Doctor2
+* 行政編號
+* 大量分隔線
+* 空白 section
+* 系統制式免責文字
+* 胸部 X 光固定偽陰性率文字
+* 「心導管室護理紀錄不予點選帶入」
+* 「不予點選帶入」
+* 感恩您
+* Dear doctor
+* Thanks for consultation
+* Thank you, sincerely
+* 多餘 `★`
+* `(管1)`
+* `(管4)`
+* `(袋)`
 
-YYYY-MM-DD 檢查名稱 - 部位
+但：
 
-例如：
+`[自備藥]`
 
-2026-07-15 MRI - brain
+保留為：
 
-2026-06-15 CT - chest, abdomen, and pelvis
+`(self-supplied)`
 
-2026-03-20 Pathology - bone marrow biopsy
+藥師評估報告產出時間：
 
-## 2. 一般影像
-
-整理為：
-
-- Clinical indication
-- Comparison
-- Findings
-- Impression
-- Suggestion
-
-來源沒有的子標題不要自行增加。
-
-範例：
-
-2026-07-17 CT - abdomen
-
-- Clinical indication
-  - ...
-- Comparison
-  - CT performed on 2026-03-09
-- Findings
-  - Liver
-    - ...
-  - Portal vein
-    - ...
-  - Spleen
-    - ...
-- Impression
-  - ...
-
-## 3. 簡短影像
-
-若只有幾行：
-
-2026-07-18 CXR
-
-- Status post PICC insertion via the right forearm
-- Borderline cardiomegaly
-- Thoracic spondylosis
-- No other significant chest abnormality
-
-不要強行建立 Findings 或 Impression。
-
-## 4. 重複報告
-
-同一檢查可能同時出現在：
-
-- 【檢查紀錄】
-- 【放射報告】
-- 門診 Object
-- Present Illness
-- Brief Summary
-
-請比較內容。
-
-優先保留最完整的正式報告。
-
-若一份只有摘要、另一份有完整 Findings 與 Impression，只保留完整版本。
-
-不要重複輸出同一份檢查。
-
-## 5. 相同結果合併
-
-只有檢查內容完全相同時，才能合併日期：
-
-2026-07-18, 2026-05-03 CXR
-
-- Status post PICC insertion via the right forearm
-- Borderline cardiomegaly
-- Thoracic spondylosis
-- No other significant abnormality
-
-若任何一項結果不同，必須分開。
-
-## 6. 病理格式
-
-使用：
-
-2026-03-20 Pathology - bone marrow biopsy
-
-- Specimen
-  - ...
-- Diagnosis
-  - ...
-- Gross description
-  - ...
-- Microscopic description
-  - ...
-- Immunohistochemistry
-  - ...
-- Molecular findings
-  - ...
-- Comment
-  - ...
-
-刪除：
-
-- 病歷號
-- 姓名
-- 身分證號
-- 床號
-- 申請單號
-- 病理醫師
-- 報告時間
-- 修改時間
-- 行政編號
-
-保留：
-
-- 診斷
-- 檢體
-- 細胞密度
-- blast 比例
-- 免疫染色
-- 病理判讀
-- 建議進行臨床相關性判讀的文字
-
-## 7. 心臟超音波
-
-格式：
-
-2026-03-19 2D transthoracic echocardiography
-
-- Measurements
-  - AO: ...
-  - LA: ...
-  - IVS: ...
-  - LVPW: ...
-  - LVEDD: ...
-  - LVESD: ...
-  - LVEF: ...
-- Findings
-  - ...
-- Conclusion
-  - ...
-
-空白數值不要輸出。
-
-## 8. 內視鏡
-
-格式：
-
-2026-03-18 Colonoscopy
-
-- Indication
-  - Anemia
-- Preparation
-  - ...
-- Extent
-  - Cecum
-- Findings
-  - ...
-- Diagnosis
-  - ...
-- Complication
-  - No immediate complication
-
-技師與醫師姓名通常省略。
+* 用來判斷 snapshot。
+* 最後不輸出。
 
 ---
 
-# 十一、[MedRec] 的整理方式
+# 三十四、文字清理
 
-## 1. SOAP
+可修正明顯的一般拼字：
 
-格式：
-
-YYYY-MM-DD SOAP 科別 醫師
-
-- S
-  - ...
-- O
-  - ...
-- A/P
-  - ...
-- Prescription
-  - ...
-
-若來源較完整，也可使用：
-
-- Subjective
-- Objective
-- Assessment
-- Plan
-- Prescription
-
-同一文件內盡量保持一致。
-
-## 2. POMR 或住院摘要
-
-格式：
-
-YYYY-MM-DD ~ YYYY-MM-DD POMR 科別 醫師
-
-- Discharge Diagnosis
-  - ...
-- Chief Complaint
-  - ...
-- History of Present Illness
-  - ...
-- Hospital Course
-  - ...
-- Discharge Medication
-  - ...
-
-若沒有住院起訖日期，可使用單一日期或省略日期範圍，但不可猜測。
-
-## 3. 門診長時間軸
-
-原始門診 Subject 或 Object 常把多年資料黏在同一段。
-
-必須拆開。
-
-例如原文：
-
-2026/07/14 acceptable condition...
-2026/06/30 acceptable condition...
-2026/06/25 finished cycle 2...
-
-整理為：
-
-- S
-  - 2026-07-14
-    - Acceptable condition without fever or chills
-    - CBC continued to show leukopenia without blasts
-  - 2026-06-30
-    - Acceptable condition without fever or chills
-    - CBC continued to show leukopenia without blasts
-  - 2026-06-25
-    - Completed cycle 2 azacitidine plus venetoclax
-    - No fever or chills
-
-不可把全部歷史內容都當成最外層門診日期當天發生。
-
-## 4. 現病史
-
-長篇現病史依語意拆分：
-
-- History of Present Illness
-  - Patient background
-    - ...
-  - Initial presentation
-    - ...
-  - Emergency department findings
-    - ...
-  - Diagnostic work-up
-    - ...
-  - Treatment course
-    - ...
-  - Current admission
-    - ...
-
-不要整段貼成一個超長句子。
-
-## 5. 診斷
-
-每個診斷一行：
-
-- Discharge Diagnosis
-  - ...
-  - ...
-  - ...
-
-保留：
-
-- 原發部位
-- 組織型態
-- TNM
-- stage
-- ECOG
-- 基因突變
-- 轉移位置
-- 共病
-- 治療相關診斷
-
-## 6. 過敏史
-
-若有明確過敏：
-
-- Allergy
-  - Drug name: reaction
-
-若為：
-
-無
-NKDA
-No known drug allergy
-
-可在相關 POMR 中寫：
-
-- Allergy
-  - No known drug allergy
-
-不要重複輸出健保卡過敏與重要病史過敏兩次。
-
-若過敏欄位空白，不要輸出。
-
----
-
-# 十二、藥品格式
-
-藥品使用：
-
-Brand name (generic name strength; dosage form) quantity# frequency route duration remark
-
-例如：
-
-Vemlidy (tenofovir alafenamide 25mg; tab) 1# QD PO 14D
-
-Takepron (lansoprazole 30mg; tab) 1# QDAC PO 11D
-
-Giotrif (afatinib 30mg; tab) 1# QOD PO 14D
-
-## 1. 品牌名
-
-有品牌名：
-
-Brand (generic)
-
-沒有品牌名：
-
-generic name
-
-不可自行發明品牌名。
-
-## 2. 劑型縮寫
-
-可使用：
-
-tab
-cap
-inj
-vial
-amp
-oral gel
-topical gel
-lotion
-cream
-inh
-nasal spray
-powder
-granules
-solution
-
-## 3. 固體口服藥
-
-原文：
-
-1tab
-1cap
-
-統一為：
-
-1#
-
-例如：
-
-Betmiga (mirabegron 50mg; tab) 1# QD PO
-
-## 4. 注射藥
-
-保留實際劑量，不寫 `1#`：
-
-Hemoclot (tranexamic acid 500mg/5mL; amp) 500mg QD IVD
-
-## 5. 外用藥
-
-例如：
-
-Nincort Oral Gel (triamcinolone 1mg/g; oral gel, 5g/tube) QS BID TOPI
-
-## 6. 吸入劑與噴劑
-
-裝置與包裝放在劑型後面：
-
-Dufanas Nasal Spray (azelastine 137mcg + fluticasone 50mcg per dose; nasal spray, 120 doses/bot)
-
-Relvar Ellipta inhalation powder (fluticasone 92mcg + vilanterol 22mcg; inh, 30 doses/bot)
-
-## 7. 自備藥
-
-可在尾端標示：
-
-(self-supplied)
-
-例如：
-
-Lenvima (lenvatinib 10mg; cap) 1# QD PO (self-supplied)
-
-## 8. 缺失欄位
-
-來源沒有劑型、途徑、天數或規格時，不可自行補充。
-
-## 9. 天數計算
-
-只有來源明確提供天數時，才寫 `7D`、`14D`。
-
-若只有起訖日期，除非使用者要求計算，否則可以直接保留：
-
-2026-07-17 ~ 2026-07-31
-
-不要自行算錯天數。
-
----
-
-# 十三、藥品去重與不同醫囑階段
-
-同一藥名不代表重複。
-
-只有以下全部相同時，才可視為重複：
-
-- 藥名
-- 規格
-- 每次劑量
-- 給藥途徑
-- 頻次
-- 起始日期
-- 結束日期
-- 資料來源
-
-下列情況不可合併：
-
-- ST 與 QD
-- loading dose 與 maintenance dose
-- PRN 與固定用藥
-- 住院處方與出院處方
-- 院內藥與自備藥
-- 不同起訖日期
-- 不同劑量
-- 不同途徑
-- 不同頻次
-
-例如：
-
-Targocid 400mg IVD ST
-
-Targocid 400mg IVD Q12H
-
-Targocid 400mg IVD QD
-
-三者代表不同醫囑階段，必須分開。
-
----
-
-# 十四、[consultation] 的整理方式
-
-格式：
-
-YYYY-MM-DD 受照會科別
-
-- Brief History and Clinical Findings
-  - Consultation purpose
-    - ...
-  - Patient background
-    - ...
-  - Relevant findings
-    - ...
-- Consultation Findings and Recommendations
-  - Findings
-    - ...
-  - Impression
-    - ...
-  - Recommendations
-    - ...
-
-## 1. ConSult Text
-
-將會診申請內容放在：
-
-- Brief History and Clinical Findings
-
-## 2. REPLY_TEXT
-
-將回覆內容放在：
-
-- Consultation Findings and Recommendations
-
-## 3. 簡短會診
-
-若只是安排 PICC：
-
-2026-07-17 Cardiology
-
-- Brief History and Clinical Findings
-  - Consultation purpose
-    - PICC placement for chemotherapy
-  - Patient background
-    - Myelodysplastic syndrome with excess blasts-2
-    - Admitted for cycle 3 azacitidine plus venetoclax
-- Consultation Findings and Recommendations
-  - Plan
-    - Arrange PICC placement
-    - Complete informed consent before the procedure
-
-## 4. 避免重複
-
-會診內若複製了完整住院病史，而同一病史已在 [MedRec] 完整呈現，會診區只保留與會診問題直接相關的背景。
-
-但不能刪除會診科別作出判斷所依據的重要資料。
-
----
-
-# 十五、[surgical operation] 的整理方式
-
-每次手術使用：
-
-YYYY-MM-DD
-
-- Operation
-  - ...
-- Finding
-  - ...
-- Procedure
-  - ...
-- Specimen
-  - ...
-- Estimated blood loss
-  - ...
-- Blood transfusion
-  - ...
-- Complication
-  - ...
-
-來源沒有的項目不要增加。
-
-多次手術集中在同一個：
-
-[surgical operation]
-
-之下。
-
-不要為每次手術重複輸出 `[surgical operation]`。
-
-例如：
-
-[surgical operation]
-
-2025-10-30
-
-- Operation
-  - Left Port-A insertion
-- Finding
-  - Port-A positioned in the left subclavian region
-
-
-2024-04-11
-
-- Operation
-  - Thulium laser resection of the prostate
-  - Coagulation of bladder diverticulum
-- Finding
-  - ...
-
----
-
-# 十六、[radiotherapy] 的整理方式
-
-使用：
-
-- YYYY-MM-DD ~ YYYY-MM-DD - total dose/fractions (beam energy) to treatment site
-
-例如：
-
-- 2026-06-22 ~ 2026-06-29 - 1800cGy/6 fractions (6MV photon) to T6
-
-保留：
-
-- 起始日期
-- 結束日期
-- 總劑量
-- 分次數
-- 每次劑量
-- 射束能量
-- 照射部位
-- 治療狀態
-
-若只是計畫：
-
-- 2026-04-20 - Planned CT simulation
-- Planned radiotherapy: 2500cGy/10 fractions to the right posterior temporal lobe and right corona radiata
-
-不可改寫為已完成。
-
----
-
-# 十七、[chemotherapy] 的整理方式
-
-## 1. 基本格式
-
-每次療程使用一個主要項目：
-
-- YYYY-MM-DD - 主治療藥物
-  - 前處置與支持性治療
-
-## 2. 主治療藥物內容順序
-
-使用：
-
-藥名 計算劑量 實際劑量 稀釋液 稀釋體積 輸注時間 治療日
-
-例如：
-
-- 2026-07-17 - Vidaza (azacitidine) 75mg/m2 120mg NS 100mL 15min D1-7
-  - dexamethasone 4mg + diphenhydramine 30mg + NS 250mL
-
-## 3. 聯合方案
-
-例如：
-
-- 2025-10-31 ~ 2025-11-01 - Rixathon (rituximab) 375mg/m2 640mg NS 500mL 8hr D1 + Endoxan (cyclophosphamide) 750mg/m2 1280mg NS 250mL 30min D2 + vincristine 1.4mg/m2 2mg NS 50mL 10min D2 + Compesolon (prednisolone) 60mg/m2 D2-6 (R-COP)
-  - dexamethasone 4mg + diphenhydramine 30mg + Acetal (acetaminophen) 500mg PO + Akynzeo (netupitant 300mg + palonosetron 0.5mg) PO + NS 250mL
-
-## 4. 前處置
-
-通常包括：
-
-- dexamethasone
-- diphenhydramine
-- acetaminophen
-- Akynzeo
-- palonosetron
-- aprepitant
-- hydration
-- normal saline
-
-前處置放在主治療下一層。
-
-不要把前處置當成抗癌主藥。
-
-## 5. 實際劑量與計算劑量
-
-若來源同時提供：
-
-75mg/m2
-actual dose 120mg
-
-兩者都保留：
-
-75mg/m2 120mg
-
-## 6. 稀釋液與時間
-
-保留：
-
-NS
-D5W
-100mL
-250mL
-500mL
-15min
-30min
-90min
-12hr
-22hr
-
-通常不需要保留精確輸注速率，例如：
-
-419.2mL/hr
-
-除非輸注速率本身具有特殊臨床意義，例如 rituximab 階段性加速輸注。
-
-## 7. ST 與 QD 重複
-
-若 ST 是療程啟動醫囑，後續 QD 是相同療程持續給藥，不要把相同主藥輸出兩次。
-
-應整合為實際療程日期或 D1-D7。
-
-但若 ST 與 QD 劑量不同，必須分開。
-
-## 8. 醫囑與實際給藥
-
-若只有：
-
-化療處方簽
-
-但沒有明確給藥紀錄，不要使用：
-
-received
-completed
-was administered
-
-只輸出客觀療程紀錄：
-
-- 2026-07-17 - Azacitidine regimen ordered: 75mg/m2 D1-7
-
-若有明確給藥時間、實際劑量與輸注紀錄，可以依給藥紀錄整理。
-
-## 9. 破碎資料
-
-例如：
-
-(6) Drug...
-(11) Drug...
-(15) Drug...
-
-若可由前後內容明確判斷為方案計算劑量，可整合。
-
-若無法確定，不可猜測。
-
----
-
-# 十八、重複資料的處理方式
-
-同一醫療內容可能出現在：
-
-- Lab Results
-- SOAP Object
-- Present Illness
-- Brief Summary
-- Consultation
-- Imaging report
-- Discharge summary
-- Hospital Course
-
-請依以下原則處理。
-
-## 1. 正式報告優先
-
-影像以完整正式影像報告為主。
-
-病理以正式病理報告為主。
-
-檢驗以 Lab Results 或完整特殊檢驗報告為主。
-
-## 2. MedRec 保留臨床意義
-
-即使檢驗已在 [lab data] 出現，若住院經過需要說明：
-
-- Severe thrombocytopenia
-- Progressive bilirubin elevation
-- Neutropenic fever
-- Renal function deterioration
-
-可在 [MedRec] 以臨床敘述保留，但不需重複貼上整批數值。
-
-## 3. 不可誤刪時間變化
-
-不同日期、不同結果不能視為重複。
-
-例如病灶：
-
-- decreased
-- stable
-- enlarged
-- progressed
-
-必須分別保留。
-
----
-
-# 十九、拼字與文字清理
-
-可以修正明顯的一般拼字錯誤：
-
-Azacitadine → Azacitidine
 Recommandations → Recommendations
 Objecitve → Objective
 bone mrrow → bone marrow
 flow cytometery → flow cytometry
-resiistance → resistance
-imapirment → impairment
 
-但不可在以下內容不確定時自行修正：
+但對：
 
-- 藥物名稱
-- 實際劑量
-- 日期
-- 病理診斷
-- 基因結果
-- TNM
-- 分期
-- 菌名
-- 手術名稱
+* 藥名
+* 菌名
+* 病理診斷
+* dose
+* date
+* TNM
+* stage
+* gene result
 
-## HTML 編碼
+若不確定不可自行修正。
 
-必須還原：
+HTML encoding：
 
-&lt; → <
-&gt; → >
-&apos; → '
-&amp; → &
-&quot; → """"""""
+< → <
+> → >
+' → '
+& → &
+" → "
 
-所有彎引號統一為普通半形 apostrophe：
-
-’
-
-改為：
+所有彎 apostrophe 統一為：
 
 '
 
 ---
 
-# 二十、不確定資料的處理方式
+# 三十五、不確定或衝突資料
 
-若出現：
+若存在：
 
-- 日期衝突
-- 劑量疑似錯誤
-- 性別或年齡不一致
-- 不完整句子
-- 輸注時間不合理
-- 表格錯位
-- 病原體與結果無法配對
-- 診斷互相矛盾
-- 分期互相矛盾
+* 日期衝突
+* 劑量衝突
+* 不合理輸注時間
+* 年齡或性別不一致
+* 分期不一致
+* 病理結果不一致
+* culture table alignment 不清
+* hospitalization 配對不清
+* discharge medication 無法對應
 
 不可自行猜測。
 
-可使用：
+必要時使用：
 
 [source data unclear]
 
@@ -1517,179 +1363,304 @@ imapirment → impairment
 
 [table alignment unclear]
 
-只在必要時標示。
+[source data inconsistent]
 
-若使用者要求只做格式整理而不要評論，則保留來源可確認的內容，省略無法解析的破碎片段。
-
----
-
-# 二十一、輸出前必做的完整檢查
-
-整份病歷資料輸出前，逐項確認：
-
-1. 是否已完整處理本次輸入的全部內容直到真正結尾。
-2. 是否全程將本次輸入視為同一位病人的資料，並保持為單一處理單位。
-3. 是否讀到文件真正結尾，而不是停在出院帶藥。
-4. 是否移除空白區段。
-5. 是否依固定區段順序輸出。
-6. 日期是否轉成 YYYY-MM-DD。
-7. 區段內是否由新到舊排列。
-8. 是否所有項目符號在原始純文字中都明確使用 `- `，沒有使用 `* `、`+ ` 或其他符號。
-9. 是否每層使用兩個空白縮排。
-10. 是否同一階層式清單內沒有空白行，尤其父層與子層、子層與下一個父層或同層項目之間。
-11. 是否最終回答完整置於單一 code box 中，且 code box 外沒有任何文字。
-12. 是否移除病人直接識別資訊。
-13. 是否移除醫院行政雜訊。
-14. 是否移除空白檢驗群組名稱。
-15. 是否保留真正檢驗結果。
-16. 是否優先使用完整影像或病理報告。
-17. 是否避免重複輸出同一報告。
-18. 是否保留病灶大小、分期、基因及轉移位置。
-19. 是否保留病理免疫染色及重要顯微結果。
-20. 是否正確區分會診申請與會診回覆。
-21. 是否把多次手術放在同一手術區段。
-22. 是否正確區分化療主藥與前處置。
-23. 是否同時保留計算劑量與實際劑量。
-24. 是否沒有把處方計畫誤寫成已完成治療。
-25. 是否沒有因藥名相同而錯誤合併不同醫囑。
-26. 是否沒有自行補上來源沒有的品牌、劑型、途徑或天數。
-27. 是否保留原文的不確定語氣。
-28. 是否沒有加入新的臨床診斷或推論。
+若只是無法解析且沒有重要臨床價值的破碎片段，可省略。
 
 ---
 
-# 二十二、完整輸出骨架
+# 三十六、Markdown 格式
 
-請依下列骨架輸出，但沒有資料的區段要省略。
+最終只使用 plain text Markdown。
+
+項目符號只能使用：
+
+*
+
+每層縮排兩個半形空白。
+
+例如：
+
+* First level
+
+  * Second level
+
+    * Third level
+
+不得使用：
+
+*
+
+-
+
+•
+全形破折號
+
+日期標題不加 bullet：
+
+2026-09-11 Progress Note Hemato-Oncology
+
+治療紀錄日期加 bullet：
+
+* 2026-07-17 - Vidaza ...
+
+不使用粗體。
+
+不使用 Markdown table。
+
+同一階層清單內不得插入空白行。
+
+不同日期紀錄之間留一個空白段落。
+
+不同 root section 之間留一個空白段落。
+
+---
+
+# 三十七、最終輸出 canonical skeleton
+
+沒有資料的 section 必須省略。
+
+[allergy]
+
+* ...
+
+[vital signs]
+
+2026-09-11 12:30
+
+* T: ...
+* P: ...
+* R: ...
+* BP: ...
+* SpO2: ...
+
+2026-09-11 12:55
+
+* Blood sugar: ...
+
+[active medication]
+
+* Drug ...
+* Drug ...
+
+[valid medication]
+
+* Drug ...
+* Drug ...
 
 [lab data]
 
-2026-07-17    WBC                           1.09                ×10^3/μL
-2026-07-17    HGB                           10.6                g/dL
-2026-07-17    PLT                           78                  ×10^3/μL
+2026-09-10    WBC                           ...
+2026-09-10    HGB                           ...
 
+2026-09-08 Blood culture
 
-2026-05-05 Blood culture
+* Specimen
 
-- Specimen
-  - Peripheral blood
-- Organism
-  - ...
-- Susceptibility
-  - ...
+  * ...
+* Result
 
+  * ...
 
 [exam finding]
 
-2026-07-18 CXR
+2026-09-08 CXR
 
-- Status post PICC insertion via the right forearm
-- Borderline cardiomegaly
-- Thoracic spondylosis
+* ...
 
+2026-08-20 CT - chest
 
-2026-03-20 Pathology - bone marrow biopsy
+* Findings
 
-- Specimen
-  - Bone marrow
-- Diagnosis
-  - ...
-- Gross description
-  - ...
-- Microscopic description
-  - ...
-- Immunohistochemistry
-  - ...
+  * ...
+* Impression
 
+  * ...
 
 [MedRec]
 
-2026-07-14 SOAP Hemato-Oncology Physician Name
+2026-09-11 Progress Note Hemato-Oncology Physician
 
-- S
-  - ...
-- O
-  - ...
-- A/P
-  - ...
-- Prescription
-  - Brand (generic strength; dosage form) 1# QD PO
+* S
 
+  * ...
+* O
 
-2026-07-05 ~ 2026-07-17 POMR Hemato-Oncology Physician Name
+  * ...
+* A
 
-- Discharge Diagnosis
-  - ...
-- Chief Complaint
-  - ...
-- History of Present Illness
-  - ...
-- Hospital Course
-  - ...
-- Discharge Medication
-  - Brand (generic strength; dosage form) 1# BID PO 7D
+  * ...
+* P
 
+  * ...
+
+2026-09-08 Weekly Summary Hemato-Oncology Physician
+
+* Problem List
+
+  * ...
+* Clinical Course
+
+  * ...
+* Plan
+
+  * ...
+
+2026-09-02 Admission Note Hemato-Oncology Physician
+
+* Chief Complaint
+
+  * ...
+* History of Present Illness
+
+  * ...
+* Assessment
+
+  * ...
+* Plan
+
+  * ...
+
+2026-08-25 SOAP Hemato-Oncology Physician
+
+* S
+
+  * ...
+* O
+
+  * ...
+* A/P
+
+  * ...
+* Prescription
+
+  * ...
+
+2026-07-01 ~ 2026-07-08 POMR Hemato-Oncology Physician
+
+* Discharge Diagnosis
+
+  * ...
+* Chief Complaint
+
+  * ...
+* History of Present Illness
+
+  * ...
+* Hospital Course
+
+  * ...
+* Discharge Medication
+
+  * ...
 
 [consultation]
 
-2026-07-13 Colorectal Surgery
+2026-07-13 Cardiology
 
-- Brief History and Clinical Findings
-  - Consultation purpose
-    - ...
-  - Patient background
-    - ...
-  - Relevant findings
-    - ...
-- Consultation Findings and Recommendations
-  - Findings
-    - ...
-  - Impression
-    - ...
-  - Recommendations
-    - ...
+* Brief History and Clinical Findings
 
+  * Consultation purpose
+
+    * ...
+* Consultation Findings and Recommendations
+
+  * Impression
+
+    * ...
+  * Recommendations
+
+    * ...
 
 [surgical operation]
 
-2025-10-30
+2026-06-03
 
-- Operation
-  - Left Port-A insertion
-- Finding
-  - ...
+* Surgery
 
+  * ...
+* Finding
+
+  * ...
 
 [radiotherapy]
 
-- 2026-06-22 ~ 2026-06-29 - 1800cGy/6 fractions (6MV photon) to T6
-
+* 2026-06-22 ~ 2026-06-29 - 1800cGy/6 fractions (6MV photon) to T6
 
 [chemotherapy]
 
-- 2026-07-17 - Vidaza (azacitidine) 75mg/m2 120mg NS 100mL 15min D1-7
-  - dexamethasone 4mg + diphenhydramine 30mg + NS 250mL
+* 2026-07-17 - Vidaza (azacitidine) 75mg/m2 120mg NS 100mL 15min D1-7
+
+  * dexamethasone 4mg + diphenhydramine 30mg + NS 250mL
 
 ---
 
-# 二十三、最終輸出限制
+# 三十八、輸出前必做檢查
 
-最終回答只能包含整理後的病歷資料。
+輸出前逐項確認：
 
-最終回答必須完整放在單一 code box 中，且 code box 外不得輸出任何文字。
+1. 是否已閱讀到整份原始資料真正結尾。
+2. 是否全程只處理一位病人。
+3. 是否沒有看到出院帶藥就提前停止。
+4. 是否使用正確 root section 順序。
+5. 是否有 allergy 時放在最前面。
+6. 是否把生命徵象及血糖整理到 `[vital signs]`。
+7. 是否只把目前仍 active 的住院 medication 放 `[active medication]`。
+8. 是否只把目前仍 current/valid 的 outpatient medication 放 `[valid medication]`。
+9. 是否沒有把出院帶藥錯放到 `[valid medication]`。
+10. 是否將 culture / microbiology 放 `[lab data]`。
+11. 是否將 pathology / imaging / endoscopy 放 `[exam finding]`。
+12. 是否將門診、急診、住院統一整理在 `[MedRec]`。
+13. 是否區分已出院 hospitalization 與目前 hospitalization。
+14. 已出院 hospitalization 是否整理成 POMR。
+15. 目前 hospitalization 是否保留 Admission Note / Progress Note / Weekly Summary。
+16. 是否沒有替仍住院病人自行製造 POMR 或 discharge summary。
+17. 是否不同 hospitalization episode 沒有混合。
+18. 是否正確配置出院帶藥到對應 POMR。
+19. 是否沒有把門診現在用藥強行配到最近一次 SOAP。
+20. 是否每個 section 內依日期由新到舊排列。
+21. 是否日期全部標準化為 YYYY-MM-DD。
+22. 是否所有 bullet 都是 `- `。
+23. 是否每層使用兩個空白縮排。
+24. 是否同一 list hierarchy 中沒有多餘空白行。
+25. 是否沒有 Markdown table。
+26. 是否移除病人直接識別資訊。
+27. 是否移除系統行政雜訊。
+28. 是否保留真正檢驗結果。
+29. 是否去除沒有數值的檢驗群組名稱。
+30. 是否優先保留正式完整檢查報告。
+31. 是否沒有重複輸出同一正式報告。
+32. 是否保留病灶大小、TNM、stage、gene、metastatic site。
+33. 是否保留病理的重要 microscopic / IHC findings。
+34. 是否正確區分 Consultation request 與 reply。
+35. 是否正確區分 chemotherapy main drug 與 premedication。
+36. 是否沒有把 planned treatment 誤寫成 completed。
+37. 是否沒有把同藥不同醫囑錯誤合併。
+38. 是否沒有自行補上來源沒有的 brand、dose、route、duration。
+39. 是否保留來源原本的不確定語氣。
+40. 是否沒有加入新的臨床推論或診斷。
+
+---
+
+# 三十九、最終輸出限制
+
+最終回答必須完整置於單一 fenced code block 中。
+
+code box 外不得輸出任何文字。
 
 不要輸出：
 
-- 「以下是整理結果」
-- 「我已完成」
-- 分析說明
-- 刪除內容說明
-- 修改紀錄
-- 資料品質評論
-- 參考文獻
-- 額外總結
-- 問題或確認要求
+* 以下是整理結果
+* 我已完成
+* 分析說明
+* 修改紀錄
+* 刪除內容說明
+* 資料品質評論
+* 參考文獻
+* 額外總結
+* 問題
+* 確認要求
 
-直接從第一個實際存在的區段開始輸出。
+直接從第一個實際存在的 root section 開始。
 
-現在請依照以上全部規則，將接下來提供的這一位病人的未整理病歷資料轉換為整齊、統一的 plain text Markdown 格式。
+現在請依照以上全部規則，將接下來提供的這一位病人的未整理病歷資料，轉換成整齊、統一、可直接提供給 MedBench 使用的 plain text Markdown 格式。
