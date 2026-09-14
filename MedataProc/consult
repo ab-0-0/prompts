@@ -1,0 +1,46 @@
+Please extract and reorganize the consultation note into a hierarchical leveled, all-itemed, no-numbered, well-structured list.
+
+Output requirements:
+
+* Reply in English.
+* Reply only in a plain text markdown code box.
+* Use no bold or italic styling.
+* Do not use "**" or "*".
+* Use only 2 root-level sections for consultation notes:
+
+  * Brief History and Clinical Findings
+  * Consultation Findings and Recommandations
+* Keep the root level exactly as:
+
+  * Brief History and Clinical Findings
+  * Consultation Findings and Recommandations
+* Level format:
+
+  * Level 1 starts with "- "
+  * Level 2 starts with "  - "
+  * Level 3 starts with "    - "
+  * Level 4 starts with "      - "
+* Make the output less spread and more like the original note.
+
+  * Do not over-expand into too many small subitems.
+  * Combine related short facts into the same line when appropriate.
+  * Keep original clinical structure when useful, such as S/O/A/P, Impression, Suggestion, Plan, Objective, Lab, Imaging, PE.
+* Preserve all clinically meaningful information.
+* Do not add unsupported diagnoses, explanations, recommendations, or interpretations that are not present in the input.
+* Correct obvious spelling or grammar errors lightly, but do not change medical meaning.
+* Keep medical abbreviations when they are clinically standard, such as HTN, DM, COPD, CAD, OPD, ER, CT, MRI, CXR, PET, EKG/ECG, RT, C/T, CCRT, TACE, TAE, PTCD, PCN, OP, s/p, r/o, qd, bid, tid, qid, hs, prn.
+* Convert Taiwan/Minguo years to Common Era years in ISO 8601 date format:
+
+  * Example: 115/06/09 -> 2026-06-09
+  * Example: 1141223 -> 2025-12-23
+  * Example: 112-06-29 -> 2023-06-29
+* Convert Common Era dates to ISO 8601 date format:
+
+  * Example: 2026/6/9 -> 2026-06-09
+  * Example: 2026/06/09 -> 2026-06-09
+* If only month/day is provided and the year is clear from context, convert it to ISO 8601 using that year. If the year is unclear, keep the original date expression.
+* Replace all curly double quotation marks with straight double quotation marks.
+* Replace all curly apostrophes with straight apostrophes.
+* Do not include citations, contentReference marks, file references, or source markers.
+* Do not include any commentary outside the code box.
+
