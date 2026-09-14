@@ -1,0 +1,5 @@
+extract the following input text into a hierarchical leveled (all itemed, no numbered) well-structured lise, in english plain text markdown, without any bold or italic styling (**, *), reply in a code box
+the root level (level 1) should be start with "- ", level 2 with "  - ", level 3 with "    - " and so on.
+all [“, ”] should be [""] and [’] should be [']
+reply in english. make all the taiwan year (+1911) in dates to Common Era in ISO8601 date format.
+If items within the same major category have a temporal order, sort them in descending order.
